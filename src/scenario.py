@@ -19,7 +19,7 @@ import threading
 import math
 
 
-class Scenario(RegelumBase):
+class ROSScenario(RegelumBase):
     def __init__(
         self,
         policy: Policy,
@@ -75,7 +75,7 @@ class Scenario(RegelumBase):
         self.lock = threading.Lock()
 
         # Topics
-        
+        rospy.init_node('ros_preset_node')
         self.pub_cmd_vel = rospy.Publisher("/cmd_vel", Twist, queue_size=1, latch=False)
         self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
 

@@ -1,4 +1,4 @@
-_target_: src.scenario.Scenario
+_target_: src.scenario.ROSScenario
 
 
 policy: ~ policy
