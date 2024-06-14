@@ -27,8 +27,14 @@ else
                 -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
                 -e XAUTHORITY \
                 -v /dev:/dev \
-                -v $ROOT_DIR/../../regelum-playground:/regelum-playground \
+                -v $ROOT_DIR:/regelum-playground \
                --net=host \
                --privileged \
                --name ros-regelum ros-regelum-img
 fi
+
+cd ROOT_DIR/.git && \
+  sudo chgrp -R ${id -g -n ${whoamai}} . &&\
+  sudo chmod -R g+rwX . &&\
+  sudo find . -type d -exec chmod g+s '{}' + &&\
+  cd ..
