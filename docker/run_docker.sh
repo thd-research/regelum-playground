@@ -27,7 +27,9 @@ else
                 -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
                 -e XAUTHORITY \
                 -v /dev:/dev \
-                -v $ROOT_DIR:/regelum-playground \
+                -v $ROOT_DIR/turtlebot3_ws:/turtlebot3_ws \
+                -v $ROOT_DIR/../regelum-playground:/regelum-playground \
+                -v $ROOT_DIR/../rcognita-edu:/rcognita-edu \
                --net=host \
                --privileged \
                --name ros-regelum ros-regelum-img

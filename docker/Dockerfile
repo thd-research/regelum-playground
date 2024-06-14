@@ -30,24 +30,40 @@ RUN apt-get update && apt-get install -y apt-utils \
                                          mc \
                                          vim \
                                          gedit \
+                                         python2 \
+                                         python-dev \
+                                         python3-pip \
                                          gcc \
                                          gfortran \
                                          libopenblas-dev \ 
 					                     cmake \
                                          ffmpeg
 
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get update -y
-# RUN apt install python3.10 python3.10-distutils -y
+# Install ROS desktop and Gazebo
 
-# Install Python 3.11
-RUN apt-get install -y python3.11 python3.11-venv python3.11-dev
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-RUN pip3 install --ignore-installed regelum-control==0.3.2
+RUN add-apt-repository ppa:trinitronx/focal-backport-buildeps
+RUN apt-get update
+RUN apt-get install -y python3-pyqt5
 
-# # Dependencies of regelum
-# RUN apt install libxcb-xinerama0
+RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list
+RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
+
+RUN apt-get update && apt-get install -y ros-noetic-desktop-full \
+   ros-noetic-joy ros-noetic-teleop-twist-joy \
+   ros-noetic-teleop-twist-keyboard ros-noetic-laser-proc \
+   ros-noetic-rgbd-launch ros-noetic-rosserial-arduino \
+   ros-noetic-rosserial-python ros-noetic-rosserial-client \
+   ros-noetic-rosserial-msgs ros-noetic-amcl ros-noetic-map-server \
+   ros-noetic-move-base ros-noetic-urdf ros-noetic-xacro \
+   ros-noetic-compressed-image-transport ros-noetic-rqt* ros-noetic-rviz \
+   ros-noetic-gmapping ros-noetic-navigation ros-noetic-interactive-markers \
+   ros-noetic-dynamixel-sdk \
+   ros-noetic-turtlebot3-msgs \
+   ros-noetic-turtlebot3
+
+
+
+#RUN pip3 install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
 
 ## GUI tunnel from docker
 RUN dpkg --add-architecture i386 && \
@@ -56,8 +72,7 @@ RUN dpkg --add-architecture i386 && \
         libxdmcp6 libxdmcp6:i386 \
         libxcb1 libxcb1:i386 \
         libxext6 libxext6:i386 \
-        libx11-6 libx11-6:i386 \
-        libxcb-xinerama0 && \
+        libx11-6 libx11-6:i386 && \
     rm -rf /var/lib/apt/lists/*
 
 # nvidia-container-runtime
@@ -80,4 +95,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 # Required for non-glvnd setups.
 ENV LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+
+# RUN echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> ~/.bashrc                    
+RUN echo "source /opt/ros/noetic/setup.bash"  >> ~/.bashrc 
+
+ENV source /opt/ros/noetic/setup.bash
+ENV source ~/../turtlebot3_ws/build.bash
+
+# Install Python 3.11 and regelum-control module
+RUN add-apt-repository -y ppa:deadsnakes/ppa
+RUN apt-get update -y
+
+RUN apt-get install -y python3.11 python3.11-venv python3.11-dev
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+RUN python3.11 -m pip install --ignore-installed regelum-control==0.3.2
+RUN pip3 uninstall -y pyqt5
+
 RUN git config --global --add safe.directory /regelum-playground
+RUN echo 'source ~/../turtlebot3_ws/devel/setup.bash' >> ~/.bashrc \
+    && echo 'export TURTLEBOT3_MODEL=burger' >> ~/.bashrc
+#    && echo 'export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH ~/../turtlebot3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models' >> ~/.bashrc \
+#    && echo 'export ROS_MASTER_URI=http://192.168.50.62:11311' >> ~/.bashrc \
+#    && echo 'export ROS_HOSTNAME=192.168.50.62' >> ~/.bashrc
+
+# Need to change your IP in the variables $ROS_MASTER_URI and $ROS_HOSTNAME
