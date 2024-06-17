@@ -1,0 +1,15 @@
+defaults:
+  - policy: 3wrobot_kin_nomial
+  - system: 3wrobot_kin_customized
+  - scenario: custom_scenario
+  - common: ${system}
+  - initial_conditions: ${system}
+
+callbacks:
+  - regelum.callback.ScenarioStepLogger
+  - regelum.callback.HistoricalDataCallback
+  - regelum.callback.ValueCallback
+
+rehydra:
+  sweep:
+    dir: ${oc.env:REGELUM_DATA_DIR}/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

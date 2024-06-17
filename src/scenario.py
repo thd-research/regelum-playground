@@ -18,12 +18,15 @@ import transformations as tftr
 import threading
 import math
 
+import traceback 
+
 
 class ROSScenario(RegelumBase):
     def __init__(
         self,
         policy: Policy,
         system: System,
+        state_goal: np.ndarray,
         sampling_time: float = 0.1,
         constraint_parser: Optional[ConstraintParser] = None,
         observer: Optional[Observer] = None,
@@ -31,6 +34,7 @@ class ROSScenario(RegelumBase):
         N_iterations: int = 1,
         value_threshold: float = np.inf,
         discount_factor: float = 1.0,
+        **kwargs
     ):
         super().__init__()
         self.N_episodes = N_episodes
@@ -53,9 +57,10 @@ class ROSScenario(RegelumBase):
         )
         self.observer = observer if observer is not None else ObserverTrivial()
 
-
         self.state = np.zeros(3)
-        self.action = self.action_init
+
+        self.action_init = np.zeros(2)
+        self.action = self.action_init.copy()
         self.observation = AwaitedParameter(
             "observation", awaited_from=self.system.get_observation.__name__
         )
@@ -69,9 +74,14 @@ class ROSScenario(RegelumBase):
         self.action_old = AwaitedParameter(
             "action_old", awaited_from=self.compute_action.__name__
         )
-        self.running_objective = lambda x: 0
+        self.running_objective = (lambda observation, action: 0)
 
-        self.RATE = rospy.get_param('/rate', 10)
+        self.state_goal = state_goal
+        self.rotation_counter = 0
+        self.prev_theta = 0
+        self.new_state = None
+        # ROS 
+        self.RATE = rospy.get_param('/rate', 50)
         self.lock = threading.Lock()
 
         # Topics
@@ -80,6 +90,10 @@ class ROSScenario(RegelumBase):
         self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
 
         self.reset()
+
+    def get_velocity(self, msg):
+        self.linear_velocity = msg.twist.twist.linear.x
+        self.angular_velocity = msg.twist.twist.angular.z
 
     def odometry_callback(self, msg):
         self.lock.acquire()
@@ -99,11 +113,6 @@ class ROSScenario(RegelumBase):
         theta = current_rpy[0]
         
         self.state = [x, y, theta]
-
-        if self.is_continue_update():
-            if np.linalg.norm(np.array(self.state)[:2] - self.state_goal[:2]) < 0.1:
-                self.state_goal = self.get_next_state_goal()
-                print("self.state_goal: ", self.state_goal[:2])
         
         # Make transform matrix from 'robot body' frame to 'goal' frame
         
@@ -136,7 +145,6 @@ class ROSScenario(RegelumBase):
         
         self.prev_theta = theta
         theta = theta + 2 * np.pi * self.rotation_counter
-        self.new_theta = theta
         
         # Orientation transform
         new_theta = theta - theta_goal
@@ -154,19 +162,23 @@ class ROSScenario(RegelumBase):
         self.lock.release()
 
     def run(self):
-        for iteration_counter in range(1, self.N_iterations + 1):
-            for episode_counter in range(1, self.N_episodes + 1):
-                self.run_episode(
-                    episode_counter=episode_counter, iteration_counter=iteration_counter
-                )
-                self.reload_scenario()
+        try:
+            for iteration_counter in range(1, self.N_iterations + 1):
+                for episode_counter in range(1, self.N_episodes + 1):
+                    self.run_episode(
+                        episode_counter=episode_counter, iteration_counter=iteration_counter
+                    )
+                    self.reload_scenario()
 
-            self.reset_iteration()
-            if self.sim_status == "simulation_ended":
-                break
+                self.reset_iteration()
+                if self.sim_status == "simulation_ended":
+                    break
+        except Exception as err:
+            print("Error:", err)
+            print("traceback:", traceback.print_exc())
 
     def get_action_from_policy(self):
-        return self.simulator.system.apply_action_bounds(self.policy.action)
+        return self.system.apply_action_bounds(self.policy.action)
 
     def run_episode(self, episode_counter, iteration_counter):
         self.episode_counter = episode_counter
@@ -175,22 +187,18 @@ class ROSScenario(RegelumBase):
 
         self.episode_start = rospy.get_time()
 
-        while self.sim_status != "episode_ended":
+        while self.sim_status != "episode_ended" and not rospy.is_shutdown():
             self.sim_status = self.step()
             rate.sleep()
 
     def step(self):
-        if (not self.is_episode_ended) and \
+        if self.new_state is not None and \
             (self.value <= self.value_threshold):
-            (
-                self.time,
-                self.state,
-                self.observation,
-                self.simulation_metadata,
-            ) = self.simulator.get_sim_step_data()
-            self.time = rospy.get_time() - self.episode_start
-            self.observation = self.state = self.new_state
 
+            self.time = rospy.get_time() - self.episode_start
+            self.observation = np.expand_dims(self.new_state, axis=0)
+            self.state = self.new_state
+            
             self.delta_time = (
                 self.time - self.time_old
                 if self.time_old is not None and self.time is not None
@@ -212,15 +220,11 @@ class ROSScenario(RegelumBase):
             velocity = Twist()
 
             # Generate ROSmsg from action
-            velocity.linear.x = self.action[0]
-            velocity.angular.z = self.action[1]
+            velocity.linear.x = self.action[0, 0]
+            velocity.angular.z = self.action[0, 1]
             self.pub_cmd_vel.publish(velocity)
 
-            self.is_episode_ended = self.simulator.do_sim_step() == -1
-
-            return "episode_continues"
-        else:
-            return "episode_ended"
+        return "episode_continues"
 
     @apply_callbacks()
     def reset_iteration(self):
@@ -230,12 +234,11 @@ class ROSScenario(RegelumBase):
     def reload_scenario(self):
         self.is_episode_ended = False
         self.recent_value = self.value
-        self.observation = self.simulator.observation
+        self.observation = np.expand_dims(self.new_state, axis=0)
         self.sim_status = 1
         self.time = 0
         self.time_old = 0
-        self.action = self.action_init
-        self.simulator.reset()
+        self.action = self.action_init.copy()
         self.reset()
         self.sim_status = 0
         return self.recent_value

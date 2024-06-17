@@ -2,5 +2,6 @@ _target_: src.scenario.ROSScenario
 
 
 policy: ~ policy
-simulator: ~ simulator
+system: ~ system
 sampling_time: $ common.sampling_time
+state_goal: $ initial_conditions.state_goal
