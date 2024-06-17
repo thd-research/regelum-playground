@@ -106,10 +106,13 @@ ENV source ~/../turtlebot3_ws/build.bash
 RUN add-apt-repository -y ppa:deadsnakes/ppa
 RUN apt-get update -y
 
-RUN apt-get install -y python3.11 python3.11-venv python3.11-dev
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
-RUN python3.11 -m pip install --ignore-installed regelum-control==0.3.2
+RUN apt-get install -y python3.10 python3.10-venv python3.10-dev
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+RUN python3.10 -m pip install --ignore-installed regelum-control==0.3.2
 RUN pip3 uninstall -y pyqt5
+
+COPY ../dev-requirements.txt /requirements.txt
+RUN python3.10 -m pip install -r /requirements.txt
 
 RUN git config --global --add safe.directory /regelum-playground
 RUN echo 'source ~/../turtlebot3_ws/devel/setup.bash' >> ~/.bashrc \
