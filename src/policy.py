@@ -425,13 +425,14 @@ class ThreeWheeledRobotNomial(Policy):
         self,
         optimizer_config: CasadiOptimizerConfig,
         action_bounds: list[list[float]],
+        kappa_params: list[float] = [2, 15, -1.50],
         eps=0.01,
     ):
         super().__init__(optimizer_config=optimizer_config)
         self.action_bounds = action_bounds
         # An epsilon for numerical stability
         self.eps = eps
-        self.update_kappa(2, 15, -1.5)
+        self.update_kappa(*kappa_params)
 
     def update_kappa(self, k_rho, k_alpha, k_beta):
         # Parameters for gazebo
