@@ -1,13 +1,13 @@
 _target_: regelum.scenario.MPC
 
-prediction_horizon: 3
+prediction_horizon: 10
 simulator: ~ simulator
 sampling_time: $ common.sampling_time
 running_objective:
   _target_: src.objective.ThreeWheeledRobotCostWithSpot
   quadratic_model:
     _target_: regelum.model.ModelQuadLin
-    weights: = numpy.array([1., 10., 0.1, 0., 0.])
+    weights: = numpy.array([10., 100., 1, 0.1, 0.1])
     quad_matrix_type: diagonal
     is_with_linear_terms: False
   spot_gain: 100
