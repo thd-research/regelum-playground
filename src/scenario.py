@@ -75,13 +75,15 @@ class ROSScenario(RegelumBase):
             "action_old", awaited_from=self.compute_action.__name__
         )
         self.running_objective = (lambda observation, action: 0)
+        self.time_final = kwargs["time_final"]
 
+        print("type of state_goal", type(state_goal))
         self.state_goal = state_goal
         self.rotation_counter = 0
         self.prev_theta = 0
         self.new_state = None
         # ROS 
-        self.RATE = rospy.get_param('/rate', 50)
+        self.RATE = rospy.get_param('/rate', 100)
         self.lock = threading.Lock()
 
         # Topics
@@ -215,7 +217,12 @@ class ROSScenario(RegelumBase):
                 estimated_state,
                 self.observation,
             )
+
+            if np.linalg.norm(self.new_state[:2]) < 0.05:
+                self.action = np.zeros_like(self.action)
             
+            self.system.receive_action(self.action)
+
             # Publish action 
             velocity = Twist()
 

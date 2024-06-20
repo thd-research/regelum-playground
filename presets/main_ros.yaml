@@ -6,7 +6,6 @@ defaults:
   - initial_conditions: ${system}
 
 callbacks:
-  - regelum.callback.ScenarioStepLogger
   - regelum.callback.HistoricalDataCallback
   - regelum.callback.ValueCallback
 

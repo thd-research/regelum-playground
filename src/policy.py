@@ -10,6 +10,11 @@ from src.system import (
 from typing import Union
 from regelum.utils import rg
 from regelum import CasadiOptimizerConfig
+from regelum.system import System
+from regelum.observer import Observer, ObserverTrivial
+from src.config import TestScipyOptimizerConfig
+
+from typing import Optional
 
 
 def soft_switch(signal1, signal2, gate, loc=np.cos(np.pi / 4), scale=10):
@@ -434,7 +439,6 @@ class ThreeWheeledRobotNomial(Policy):
         self.k_alpha = k_alpha  
         self.k_beta = k_beta
 
-
     def get_action(self, observation: np.ndarray):
         x_robot = observation[0, 0]
         y_robot = observation[0, 1]
@@ -465,3 +469,109 @@ class ThreeWheeledRobotNomial(Policy):
             v = -v
         
         return np.array([[v, w]])
+
+
+class ThreeWheeledRobotSimpleMPC(Policy):
+
+    def __init__(
+        self,
+        optimizer_config: TestScipyOptimizerConfig,
+        action_bounds: list[list[float]],
+        system: System,
+        observer: Optional[Observer] = None,
+        R1_diag: list = [],
+        Nactor: int = 6,
+        gamma: float = 1,
+        **kwargs
+    ):
+        super().__init__(optimizer_config=optimizer_config)
+        self.action_bounds = action_bounds
+
+        self.system = system
+        self.observer = observer if observer is not None else ObserverTrivial()
+
+        # An R1 for numerical stability
+        self.R1 = np.diag(np.array(R1_diag))
+
+        self.current_observation = None
+        self.Nactor = Nactor
+        self.gamma = gamma
+        self.dim_input = system.dim_inputs
+        self.dim_output = system.dim_observation
+        self.instantiate_optimization_procedure()
+
+    def quadratic_cost_function(self, action_sequence):
+        my_action_sqn = np.reshape(action_sequence, [self.Nactor, self.dim_input])
+        observation_sqn = np.zeros([self.Nactor, self.dim_output])
+        
+        # System observation prediction
+        observation_sqn[0, :] = self.current_observation
+        state = self.state_sys
+        for k in range(1, self.Nactor):
+            state = state + self.pred_step_size * self.compute_state_dynamics(0., state, my_action_sqn[k-1, :], _native_dim=True)  # Euler scheme
+            observation_sqn[k, :] = self.observer.get_state_estimation(
+                None, self.observation, self.action
+            )
+        
+        J = 0
+        for k in range(self.Nactor):
+            J += self.gamma**k * self.run_obj(observation_sqn[k, :], my_action_sqn[k, :])
+
+        return J
+    
+    def run_obj(self, observation, action):
+        if self.run_obj_struct == "quadratic":
+            chi = np.concatenate([observation, action])
+            cost = chi.T @ self.R1 @ chi
+        else:
+            cost = 1
+
+        if len(self.obstacle_pos):
+            obstacle_gain = 1000
+            obs_cost = self.rv.pdf(observation[:2])
+            cost += obstacle_gain * obs_cost
+        
+        return cost
+
+    def instantiate_optimization_procedure(self):
+        # numeric optimizer only support 1 variable
+        self.action_sequence = self.create_variable(
+            2, 
+            name="action_sequence", 
+            is_constant=False, 
+            like=np.zeros((1, self.Nactor*self.dim_input))
+        )
+
+        (
+            self.action_bounds_tiled,
+            self.action_initial_guess,
+            self.action_min,
+            self.action_max,
+        ) = self.handle_bounds(
+            self.action_bounds,
+            self.dim_action,
+            tile_parameter=self.Nactor,
+        )
+        self.register_bounds(self.action_sequence, self.action_bounds_tiled)
+    
+        self.register_objective(
+            self.quadratic_cost_function,
+            variables=[
+                self.action_sequence
+            ],
+        )
+
+    def get_action(self, observation: np.ndarray):
+        if len(observation[0]) > 3:
+            self.current_observation = observation[0, :3]
+        else:
+            self.current_observation = observation[0]
+        optimized_vel_and_angle_vel = self.optimize(
+            action_sequence=self.action_initial_guess
+        )
+
+        # The result of optimization is a dict of casadi tensors, so we convert them to float
+        angle_vel = float(optimized_vel_and_angle_vel["angle_vel"][0, 0])
+        vel = float(optimized_vel_and_angle_vel["vel"][0, 0])
+
+        return np.array([[vel, angle_vel]])

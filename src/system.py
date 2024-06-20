@@ -31,19 +31,19 @@ class MyThreeWheeledRobotDynamic(ThreeWheeledRobotDynamic):
     action_bounds = [[-1, 1], [-1, 1]]
 
 
-# @ThreeWheeledRobotAnimationWithNewLims.attach
-# @DefaultAnimation.attach
-# @detach
-# class MyThreeWheeledRobotKinematic(ThreeWheeledRobotKinematic):
-#     """The parameters correspond to those of Robotis TurtleBot3."""
+@ThreeWheeledRobotAnimationWithNewLims.attach
+@DefaultAnimation.attach
+@detach
+class MyThreeWheeledRobotKinematic(ThreeWheeledRobotKinematic):
+    """The parameters correspond to those of Robotis TurtleBot3."""
 
-#     action_bounds = [[-0.22, 0.22], [-2.84, 2.84]]
+    action_bounds = [[-0.22, 0.22], [-2.84, 2.84]]
 
 
 @ThreeWheeledRobotAnimationWithNewLims.attach
 @DefaultAnimation.attach
 @detach
-class MyThreeWheeledRobotKinematic(System):
+class MyThreeWheeledRobotKinematicCustomized(System):
     """Kinematic three-wheeled robot system implementation. """
 
     # These private variables are leveraged 

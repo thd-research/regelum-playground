@@ -1,7 +1,11 @@
 import regelum as rg
+from src.callback import ROSScenarioStepLogger
 
-
-@rg.main(config_name="main_ros", config_path="presets")
+@rg.main(config_name="main_ros", 
+         config_path="presets",
+         callbacks=[
+             ROSScenarioStepLogger
+         ])
 def launch(cfg):
     scenario = ~cfg.scenario
 
