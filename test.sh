@@ -4,7 +4,7 @@ python3.10 run.py \
             system=3wrobot_kin \
             scenario=mpc_scenario_customized \
             scenario.prediction_horizon=20 \
-            scenario.prediction_step_size=10 \
+            scenario.prediction_step_size=2 \
             common.sampling_time=.1 \
             --interactive \
             --fps=10
