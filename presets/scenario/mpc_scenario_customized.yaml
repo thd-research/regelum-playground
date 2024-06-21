@@ -12,6 +12,6 @@ running_objective:
     quad_matrix_type: diagonal
     is_with_linear_terms: False
   spot_gain: 100
-  spot_x_center: 0.5
-  spot_y_center: 0.5
+  spot_x_center: -1
+  spot_y_center: 1
   spot_std: 0.1

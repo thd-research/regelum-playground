@@ -21,10 +21,10 @@ class ThreeWheeledRobotAnimationWithNewLims(ThreeWheeledRobotAnimation):
 class ThreeWheeledRobotAnimationWithSpot(ThreeWheeledRobotAnimation):
     """Animator for the 3wheel-robot with custom x-, y-plane limits and gaussian cost spot."""
 
-    def setup(self):
+    def setup(self, config_file_name="mpc_scenario.yaml"):
         super().setup()
         config_running_objective = omegaconf.OmegaConf.load(
-            Path(__file__).parent.parent / "presets" / "scenario" / "mpc_scenario.yaml"
+            Path(__file__).parent.parent / "presets" / "scenario" / config_file_name
         )["running_objective"]
         center = (
             config_running_objective["spot_x_center"],
@@ -58,3 +58,12 @@ class ThreeWheeledRobotAnimationWithSpot(ThreeWheeledRobotAnimation):
     def lim(self, *args, **kwargs):
         self.ax.set_xlim(-1.5, 1.5)
         self.ax.set_ylim(-1.5, 1.5)
+
+class ThreeWheeledRobotAnimationWithSpotNewLims(ThreeWheeledRobotAnimationWithSpot):
+    def setup(self):
+        super().setup(config_file_name="mpc_scenario_customized.yaml")
+
+    def lim(self, *args, **kwargs):
+        self.ax.set_xlim(-4, 4)
+        self.ax.set_ylim(-4, 4)
+        pass

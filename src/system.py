@@ -7,10 +7,10 @@ from regelum.system import (
 from regelum.animation import DefaultAnimation
 from .animation import (
     ThreeWheeledRobotAnimationWithNewLims,
-    ThreeWheeledRobotAnimationWithSpot,
+    ThreeWheeledRobotAnimationWithSpotNewLims,
 )
 from regelum.callback import detach
-from regelum.system import System
+from regelum.system import System   
 
 
 # In the following two classes we want to alter their respective animation callbacks, so we:
@@ -76,7 +76,7 @@ class MyThreeWheeledRobotKinematicCustomized(System):
         return Dstate
 
 
-@ThreeWheeledRobotAnimationWithSpot.attach
+@ThreeWheeledRobotAnimationWithSpotNewLims.attach
 @DefaultAnimation.attach
 @detach
 class ThreeWheeledRobotKinematicWithSpot(MyThreeWheeledRobotKinematic): ...

@@ -1,8 +1,9 @@
 python3.10 run.py \
             simulator=ros \
             initial_conditions=3wrobot_kin_customized \
-            system=3wrobot_kin \
+            system=3wrobot_kin_with_spot \
             scenario=mpc_scenario_customized \
+            scenario.running_objective.spot_gain=100 \
             scenario.prediction_horizon=20 \
             scenario.prediction_step_size=10 \
             common.sampling_time=.1 \
