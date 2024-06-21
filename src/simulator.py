@@ -140,8 +140,19 @@ class RosTurtlebot(CasADi):
         '''
         Return: -1: episode ended
                 otherwise: episode continues
-        '''           
+        '''
+        stop_signal = False
+
+        stop_signal |= rospy.is_shutdown()
+
+        # if self.time >= self.time_final:
+        #     stop_signal |= True
+        #     self.receive_action(np.zeros_like(self.action))
+        
         self.rate.sleep()
+
+        if stop_signal:
+            return -1
 
         if self.episode_start is None:
             self.episode_start = rospy.get_time()

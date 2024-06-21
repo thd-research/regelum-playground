@@ -3,12 +3,19 @@ import numpy as np
 from typing import Optional
 
 from regelum import RegelumBase
-from regelum.policy import Policy
+from regelum.policy import Policy, RLPolicy
 from regelum.system import System
 from regelum.constraint_parser import ConstraintParser, ConstraintParserTrivial
 from regelum.objective import RunningObjective
 from regelum.observer import Observer, ObserverTrivial
-from regelum.utils import Clock, AwaitedParameter, calculate_value
+from regelum.utils import Clock, AwaitedParameter
+from regelum.simulator import Simulator
+from regelum.event import Event
+from regelum.predictor import Predictor, EulerPredictor
+from regelum.critic import CriticTrivial
+from regelum.model import ModelWeightContainer
+from regelum.optimizable.core.configs import CasadiOptimizerConfig
+from regelum.scenario import RLScenario
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -345,3 +352,77 @@ class ROSScenario(RegelumBase):
         self.clock.reset()
         self.value = 0.0
         self.is_first_compute_action_call = True
+
+class RosMPC(RLScenario):
+    """Leverages the Model Predictive Control Scenario.
+
+    The MPCScenario leverages the Model Predictive Control (MPC) approach within the reinforcement learning scenario,
+    utilizing a prediction model to plan and apply sequences of actions that optimize the desired objectives over a time horizon.
+    """
+
+    def __init__(
+        self,
+        running_objective: RunningObjective,
+        simulator: Simulator,
+        prediction_horizon: int,
+        prediction_step_size: int,
+        predictor: Optional[Predictor] = None,
+        sampling_time: float = 0.1,
+        observer: Optional[Observer] = None,
+        constraint_parser: Optional[ConstraintParser] = None,
+        discount_factor: float = 1.0,
+    ):
+        """Initialize the MPC agent, setting up the required structures for MPC.
+
+        Args:
+            running_objective (RunningObjective): The objective function
+                to assess the costs over the prediction horizon.
+            simulator (Simulator): The environment simulation for
+                applying and testing the agent.
+            prediction_horizon (int): The number of steps into the
+                future over which predictions are made.
+            predictor (Optional[Predictor]): The prediction model used
+                for forecasting future states.
+            sampling_time (float): The time step interval for scenario.
+            observer (Observer | None): The component for estimating the
+                system's current state. Defaults to None.
+            constraint_parser (Optional[ConstraintParser]): The
+                mechanism for enforcing operational constraints.
+                Defaults to None.
+            discount_factor (float): The factor for discounting the
+                value of future costs. Defaults to 1.0.
+        """
+        system = simulator.system
+        super().__init__(
+            N_episodes=1,
+            N_iterations=1,
+            simulator=simulator,
+            policy_optimization_event=Event.compute_action,
+            critic=CriticTrivial(),
+            running_objective=running_objective,
+            observer=observer,
+            sampling_time=sampling_time,
+            policy=RLPolicy(
+                action_bounds=system.action_bounds,
+                model=ModelWeightContainer(
+                    weights_init=np.zeros(
+                        (prediction_horizon + 1, system.dim_inputs), dtype=np.float64
+                    ),
+                    dim_output=system.dim_inputs,
+                ),
+                constraint_parser=constraint_parser,
+                system=system,
+                running_objective=running_objective,
+                prediction_horizon=prediction_horizon,
+                algorithm="mpc",
+                critic=CriticTrivial(),
+                predictor=(
+                    predictor
+                    if predictor is not None
+                    else EulerPredictor(system=system, 
+                                        pred_step_size=prediction_step_size)
+                ),
+                discount_factor=discount_factor,
+                optimizer_config=CasadiOptimizerConfig(),
+            ),
+        )
