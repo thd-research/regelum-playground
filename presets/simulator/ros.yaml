@@ -5,4 +5,4 @@ state_goal: $ initial_conditions.state_goal
 state_init: $ initial_conditions.state_init
 time_final: $ common.time_final
 max_step: $ common.sampling_time
-
+ros_ctrl_rate: 100

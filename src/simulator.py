@@ -1,6 +1,6 @@
 from numpy import ndarray
 from regelum.simulator import Simulator, CasADi
-from regelum.system import ComposedSystem, System
+from regelum.system import ComposedSystem, System, ThreeWheeledRobotDynamic
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -22,7 +22,8 @@ class RosTurtlebot(CasADi):
                  max_step: float | None = 0.001, 
                  first_step: float | None = 0.000001, 
                  atol: float | None = 0.00001, 
-                 rtol: float | None = 0.001
+                 rtol: float | None = 0.001,
+                 ros_ctrl_rate: int = 100
                  ):
         self.state_goal = state_goal
         self.rotation_counter = 0
@@ -35,14 +36,15 @@ class RosTurtlebot(CasADi):
         self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
 
         # ROS 
-        self.RATE = rospy.get_param('/rate', 100)
+        self.RATE = rospy.get_param('/rate', ros_ctrl_rate)
         self.lock = threading.Lock()
 
         while not hasattr(self, "new_state"):
             time.sleep(.1)
 
         super().__init__(system, self.new_state, action_init, time_final, max_step, first_step, atol, rtol)
-        
+        self._action = np.expand_dims(self.initialize_init_action(), axis=0)
+
         self.reset()
 
     def get_velocity(self, msg):
@@ -103,6 +105,10 @@ class RosTurtlebot(CasADi):
         temp = np.array([x, y , 0, 1])
         self.new_state = np.linalg.inv(self.t_matrix) @ temp.T
         self.new_state = [self.new_state[0], self.new_state[1], new_theta]
+
+        if isinstance(self.system, ThreeWheeledRobotDynamic):
+            self.new_state += [self._action[0, 0], self._action[0, 1]] # if hasattr(self, "_action") else [0, 0]
+
         self.new_state = np.expand_dims(self.new_state, axis=0)
         self.lock.release()
 
@@ -127,6 +133,7 @@ class RosTurtlebot(CasADi):
     # Publish action to gazebo
     def receive_action(self, action):
         self.system.receive_action(action)
+        self._action = action
         velocity = Twist()
 
         # Generate ROSmsg from action
@@ -147,8 +154,14 @@ class RosTurtlebot(CasADi):
 
         # if self.time >= self.time_final:
         #     stop_signal |= True
-        #     self.receive_action(np.zeros_like(self.action))
-        
+        #     self.receive_action(np.zeros_like(self.action_init))
+        # 
+
+        # if hasattr(self, "_time_measurement"):
+        #     print("It takes:", (time.perf_counter_ns() - self._time_measurement)/1000000)
+
+        # self._time_measurement = time.perf_counter_ns()
+
         self.rate.sleep()
 
         if stop_signal:
