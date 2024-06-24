@@ -1,7 +1,7 @@
 _target_: src.scenario.RosMPC
 
 prediction_horizon: 10
-prediction_step_size: 1
+prediction_step_size: $ common.sampling_time
 simulator: ~ simulator
 sampling_time: $ common.sampling_time
 running_objective:
@@ -13,5 +13,5 @@ running_objective:
     is_with_linear_terms: False
   spot_gain: 100
   spot_x_center: -1
-  spot_y_center: 1
+  spot_y_center: -1
   spot_std: 0.1
