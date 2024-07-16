@@ -16,6 +16,22 @@ from src.config import TestScipyOptimizerConfig
 
 from typing import Optional
 
+import scipy as sp
+from scipy.optimize import minimize
+from numpy.linalg import norm
+from numpy.matlib import repmat
+from .utilities import (
+    uptria2vec,
+    to_row_vec,
+    to_scalar,
+    push_vec,
+    rep_mat
+    )
+
+# from regelum.animation import (
+#     ObjectiveAnimation
+# )
+
 
 def soft_switch(signal1, signal2, gate, loc=np.cos(np.pi / 4), scale=10):
 
@@ -423,12 +439,11 @@ class ThreeWheeledRobotDynamicMinGradCLF(ThreeWheeledRobotKinematicMinGradCLF):
 class ThreeWheeledRobotNomial(Policy):
     def __init__(
         self,
-        optimizer_config: CasadiOptimizerConfig,
         action_bounds: list[list[float]],
         kappa_params: list[float] = [2, 15, -1.50],
         eps=0.01,
     ):
-        super().__init__(optimizer_config=optimizer_config)
+        super().__init__()
         self.action_bounds = action_bounds
         # An epsilon for numerical stability
         self.eps = eps
@@ -576,3 +591,682 @@ class ThreeWheeledRobotSimpleMPC(Policy):
         vel = float(optimized_vel_and_angle_vel["vel"][0, 0])
 
         return np.array([[vel, angle_vel]])
+
+
+# @ObjectiveAnimation.attach
+class ThreeWheeledRobotCALFQ(Policy):
+    def __init__(
+        self,
+        # action_bounds: list[list[float]],
+        system: Union[System],
+        # R1_diag: list = [],
+    ):
+        super().__init__()
+        action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
+        R1_diag = [1, 10, 1, 0, 0]
+        self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds)
+
+        self.action_min = np.array( action_bounds[:,0] )
+        self.action_max = np.array( action_bounds[:,1] )
+
+        self.system = system
+
+        # rc
+        # Initialization of CALFQ
+
+        self.dim_state = system.dim_observation
+        self.dim_action = system.dim_inputs
+        self.dim_observation = self.dim_state
+
+        # Taken from initial_conditions config
+        self.state_init = np.expand_dims(self.system.state, axis=0)
+        self.observation_init = self.state_init
+        self.action_init = self.get_safe_action(self.state_init)
+        self.action_curr = self.action_init
+
+        self.action_sampling_time = 0.01  # Taken from common/inv_pendulum config
+
+        self.run_obj_param_tensor = np.diag(R1_diag)
+
+        self.discount_factor = 1.0
+
+        self.buffer_size = 20
+        self.action_buffer = repmat(self.action_init, self.buffer_size, 1)
+        self.observation_buffer = repmat(self.observation_init, self.buffer_size, 1)
+
+        self.score = 0
+
+        # Critic
+        self.critic_learn_rate = 0.1
+        self.critic_num_grad_steps = 20
+
+        self.critic_struct = "quad-mix"
+
+        critic_big_number = 1e5
+
+        if self.critic_struct == "quad-lin":
+            self.dim_critic = int(
+                ((self.dim_observation + self.dim_action) + 1)
+                * (self.dim_observation + self.dim_action)
+                / 2
+                + (self.dim_observation + self.dim_action)
+            )
+            self.critic_weight_min = -critic_big_number
+            self.critic_weight_max = critic_big_number
+        elif self.critic_struct == "quadratic":
+            self.dim_critic = int(
+                ((self.dim_observation + self.dim_action) + 1)
+                * (self.dim_observation + self.dim_action)
+                / 2
+            )
+            self.critic_weight_min = 0
+            self.critic_weight_max = critic_big_number
+        elif self.critic_struct == "quad-nomix":
+            self.dim_critic = self.dim_observation + self.dim_action
+            self.critic_weight_min = 0
+            self.critic_weight_max = critic_big_number
+        elif self.critic_struct == "quad-mix":
+            self.dim_critic = int(
+                self.dim_observation
+                + self.dim_observation * self.dim_action
+                + self.dim_action
+            )
+            self.critic_weight_min = -critic_big_number
+            self.critic_weight_max = critic_big_number
+
+        self.critic_weight_tensor_init = to_row_vec(
+            np.random.uniform(1, critic_big_number / 10, size=self.dim_critic)
+        )
+        self.critic_weight_tensor = self.critic_weight_tensor_init
+
+        self.critic_weight_change_penalty_coeff = 1.0
+
+        # CALFQ
+
+        self.obstacle_x = -0.5
+        self.obstacle_y = -0.5
+        self.obstacle_sigma = 0.2
+
+        # Probability to take CALF action even when CALF constraints are not satisfied
+        self.relax_probability = 0.0
+
+        self.critic_weight_tensor_safe = self.critic_weight_tensor_init
+        self.observation_safe = self.observation_init
+        self.action_safe = self.action_init
+
+        # self.critic_weight_tensor_init_safe = self.critic_weight_tensor_init
+        # self.critic_weight_tensor_buffer_safe = []
+
+        self.critic_low_kappa_coeff = 1e-1
+        self.critic_up_kappa_coeff = 1e3
+        # Nominal desired step-wise decay of critic
+        self.critic_desired_decay = 1e-4 * self.action_sampling_time
+        # Maximal desired step-wise decay of critic
+        self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
+
+        self.action_buffer_safe = np.zeros([self.buffer_size, self.dim_action])
+        self.observation_buffer_safe = np.zeros(
+            [self.buffer_size, self.dim_observation]
+        )
+
+        self.calf_penalty_coeff = 0.05
+
+        self.calf_count = 0
+        self.safe_count = 0
+
+        # Debugging
+        self.debug_print_counter = 0
+        # /rc
+
+    # rc
+    def obstacle_penalty(self, observation, penalty_factor):
+        """
+        Calculates the value of probability density function of a bivariate normal distribution at a given point.
+        Arguments:
+        x, y : float
+            Coordinates of the point at which to calculate the probability density value.
+        mu_x, mu_y : float
+            Mean values (expectations) along the X and Y axes, respectively.
+        sigma_x, sigma_y : float
+            Standard deviations along the X and Y axes, respectively.
+        rho : float
+            Correlation coefficient between X and Y.
+
+        Returns:
+        float
+            Value of the probability density function of a bivariate normal distribution at the given point (x, y).
+        """
+        mu_x = self.obstacle_x
+        sigma_x = self.obstacle_sigma
+
+        mu_y = self.obstacle_y
+        sigma_y = self.obstacle_sigma
+        rho = 0
+        x = observation[0, 0]
+        y = observation[0, 1]
+        z = ((x - mu_x) ** 2) / (sigma_x ** 2) + ((y - mu_y) ** 2) / (sigma_y ** 2) - (2 * rho * (x - mu_x) * (y - mu_y)) / (sigma_x * sigma_y)
+        denom = 2 * np.pi * sigma_x * sigma_y * np.sqrt(1 - rho ** 2)
+        return np.exp(-z / (2 * (1 - rho ** 2))) / denom * penalty_factor
+
+    def run_obj(self, observation, action):
+        observation_action = np.hstack(
+            [to_row_vec(observation), to_row_vec(action)]
+        )
+
+        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=1e3)
+        result = observation_action @ self.run_obj_param_tensor @ observation_action.T + penalty
+
+        return to_scalar(result)
+
+    def critic_model(self, critic_weight_tensor, observation, action):
+
+        observation_action = np.hstack([to_row_vec(observation), to_row_vec(action)])
+
+        if self.critic_struct == "quad-lin":
+            feature_tensor = np.hstack(
+                [
+                    uptria2vec(
+                        np.outer(observation_action, observation_action),
+                        force_row_vec=True,
+                    ),
+                    observation_action,
+                ]
+            )
+        elif self.critic_struct == "quadratic":
+            feature_tensor = uptria2vec(
+                np.outer(observation_action, observation_action), force_row_vec=True
+            )
+        elif self.critic_struct == "quad-nomix":
+            feature_tensor = observation_action * observation_action
+        elif self.critic_struct == "quad-mix":
+            feature_tensor = np.hstack(
+                [
+                    to_row_vec(observation) ** 2,
+                    np.kron(to_row_vec(observation), to_row_vec(action)),
+                    to_row_vec(action) ** 2,
+                ]
+            )
+
+        result = critic_weight_tensor @ feature_tensor.T
+
+        return to_scalar(result)
+
+    def critic_model_grad(self, critic_weight_tensor, observation, action):
+
+        observation_action = np.hstack([to_row_vec(observation), to_row_vec(action)])
+
+        if self.critic_struct == "quad-lin":
+            feature_tensor = np.hstack(
+                [
+                    uptria2vec(
+                        np.outer(observation_action, observation_action),
+                        force_row_vec=True,
+                    ),
+                    observation_action,
+                ]
+            )
+        elif self.critic_struct == "quadratic":
+            feature_tensor = uptria2vec(
+                np.outer(observation_action, observation_action), force_row_vec=True
+            )
+        elif self.critic_struct == "quad-nomix":
+            feature_tensor = observation_action * observation_action
+        elif self.critic_struct == "quad-mix":
+            feature_tensor = np.hstack(
+                [
+                    to_row_vec(observation) ** 2,
+                    np.kron(to_row_vec(observation), to_row_vec(action)),
+                    to_row_vec(action) ** 2,
+                ]
+            )
+
+        return feature_tensor
+
+    def critic_obj(self, critic_weight_tensor_change):
+        """
+        Objective function for critic learning.
+
+        Uses value iteration format where previous weights are assumed different from the ones being optimized.
+
+        """
+        critic_weight_tensor_pivot = self.critic_weight_tensor_safe
+        critic_weight_tensor = (
+            self.critic_weight_tensor_safe + critic_weight_tensor_change
+        )
+
+        result = 0
+
+        for k in range(self.buffer_size - 1, 0, -1):
+            # Python's array slicing may return 1D arrays, but we don't care here
+            observation_prev = self.observation_buffer[k - 1, :]
+            observation_next = self.observation_buffer[k, :]
+            action_prev = self.action_buffer[k - 1, :]
+            action_next = self.action_buffer[k, :]
+
+            # observation_prev_safe = self.observation_buffer_safe[k-1, :]
+            # observation_next_safe = self.observation_buffer_safe[k, :]
+            # action_prev_safe = self.action_buffer_safe[k-1, :]
+            # action_next_safe = self.action_buffer_safe[k, :]
+
+            critic_prev = self.critic_model(
+                critic_weight_tensor, observation_prev, action_prev
+            )
+            critic_next = self.critic_model(
+                critic_weight_tensor_pivot, observation_next, action_next
+            )
+
+            temporal_error = (
+                critic_prev
+                - self.discount_factor * critic_next
+                - self.run_obj(observation_prev, action_prev)
+            )
+
+            result += 1 / 2 * temporal_error**2
+
+        result += (
+            1
+            / 2
+            * self.critic_weight_change_penalty_coeff
+            * norm(critic_weight_tensor_change) ** 2
+        )
+
+        return result
+
+    def critic_obj_grad(self, critic_weight_tensor):
+        """
+        Gradient of the objective function for critic learning.
+
+        Uses value iteration format where previous weights are assumed different from the ones being optimized.
+
+        """
+        critic_weight_tensor_pivot = self.critic_weight_tensor_safe
+        critic_weight_tensor_change = critic_weight_tensor_pivot - critic_weight_tensor
+
+        result = to_row_vec(np.zeros(self.dim_critic))
+
+        for k in range(self.buffer_size - 1, 0, -1):
+
+            observation_prev = self.observation_buffer[k - 1, :]
+            observation_next = self.observation_buffer[k, :]
+            action_prev = self.action_buffer[k - 1, :]
+            action_next = self.action_buffer[k, :]
+
+            # observation_prev_safe = self.observation_buffer_safe[k-1, :]
+            # observation_next_safe = self.observation_buffer_safe[k, :]
+            # action_prev_safe = self.action_buffer_safe[k-1, :]
+            # action_next_safe = self.action_buffer_safe[k, :]
+
+            critic_prev = self.critic_model(
+                critic_weight_tensor, observation_prev, action_prev
+            )
+            critic_next = self.critic_model(
+                critic_weight_tensor_pivot, observation_next, action_next
+            )
+
+            temporal_error = (
+                critic_prev
+                - self.discount_factor * critic_next
+                - self.run_obj(observation_prev, action_prev)
+            )
+
+            result += temporal_error * self.critic_model_grad(
+                critic_weight_tensor, observation_prev, action_prev
+            )
+
+        result += self.critic_weight_change_penalty_coeff * critic_weight_tensor_change
+
+        return result
+
+    def calf_diff(self, critic_weight_tensor, observation, action):
+        # Q^w  (s_t, a_t)
+        critic_new = self.critic_model(critic_weight_tensor, observation, action)
+        # Q^w† (s†, a†)
+        critic_safe = self.critic_model(
+            self.critic_weight_tensor_safe, self.observation_safe, self.action_safe
+        )
+        # Q^w  (s_t, a_t) - Q^w† (s†, a†)
+        return critic_new - critic_safe
+
+    def calf_decay_constraint_penalty_grad(
+        self, critic_weight_tensor, observation, action
+    ):
+        # This one is handy for explicit gradient-descent optimization.
+        # We take a ReLU here
+
+        critic_new = self.critic_model(critic_weight_tensor, observation, action)
+
+        critic_safe = self.critic_model(
+            self.critic_weight_tensor_safe, self.observation_safe, self.action_safe
+        )
+
+        if critic_new - critic_safe <= -self.critic_desired_decay:
+            relu_grad = 0
+        else:
+            relu_grad = 1
+
+        return (
+            self.calf_penalty_coeff
+            * self.critic_model_grad(critic_weight_tensor, observation, action)
+            * relu_grad
+        )
+
+        # Quadratic penalty
+        # return (
+        #     self.calf_penalty_coeff
+        #     * self.critic_model_grad(critic_weight_tensor, observation, action)
+        #     * (critic_new - critic_safe + self.critic_desired_decay)
+        # )
+
+    def get_optimized_critic_weights(
+        self,
+        observation,
+        action,
+        use_grad_descent=True,
+        use_calf_constraints=True,
+        use_kappa_constraint=False,
+        check_persistence_of_excitation=False,
+    ):
+
+        # def calf_kappa_constraint(observation, action, critic_weight_tensor):
+        #     # Force critic to respect lower and upper kappa bounds
+
+        #     # kappa_low(||s_t||) <= Q^w (s_t, a_t) <= kappa_up(||s_t||)
+        #     return self.critic_model(critic_weight_tensor, observation, action)
+
+        # Optimization method of critic. Methods that respect constraints: BFGS, L-BFGS-B, SLSQP,
+        # trust-constr, Powell
+        critic_opt_method = "SLSQP"
+        if critic_opt_method == "trust-constr":
+            # 'disp': True, 'verbose': 2}
+            critic_opt_options = {"maxiter": 40, "disp": False}
+        else:
+            critic_opt_options = {
+                "maxiter": 40,
+                "maxfev": 80,
+                "disp": False,
+                "adaptive": True,
+                "xatol": 1e-3,
+                "fatol": 1e-3,
+            }  # 'disp': True, 'verbose': 2}
+
+        critic_low_kappa = self.critic_low_kappa_coeff * norm(observation) ** 2
+        critic_up_kappa = self.critic_up_kappa_coeff * norm(observation) ** 2
+
+        constraints = []
+        constraints.append(
+            sp.optimize.NonlinearConstraint(
+                lambda critic_weight_tensor: self.calf_diff(
+                    critic_weight_tensor=critic_weight_tensor,
+                    observation=observation,
+                    action=action,
+                ),
+                -self.critic_max_desired_decay,
+                -self.critic_desired_decay,
+            )
+        )
+        if use_kappa_constraint:
+
+            constraints.append(
+                sp.optimize.NonlinearConstraint(
+                    lambda critic_weight_tensor: self.critic_model(
+                        critic_weight_tensor=critic_weight_tensor,
+                        observation=observation,
+                        action=action,
+                    ),
+                    critic_low_kappa,
+                    critic_up_kappa,
+                )
+            )
+
+        bounds = sp.optimize.Bounds(
+            self.critic_weight_min, self.critic_weight_max, keep_feasible=True
+        )
+
+        critic_weight_tensor_change_start_guess = to_row_vec(np.zeros(self.dim_critic))
+
+        if use_calf_constraints:
+            if use_grad_descent:
+
+                critic_weight_tensor = self.critic_weight_tensor
+
+                for _ in range(self.critic_num_grad_steps):
+
+                    critic = self.critic_model(
+                        critic_weight_tensor, observation, action
+                    )
+
+                    # Simple ReLU penalties for bounding kappas
+                    if critic <= critic_up_kappa:
+                        relu_kappa_up_grad = 0
+                    else:
+                        relu_kappa_up_grad = 1
+
+                    if critic >= critic_low_kappa:
+                        relu_kappa_low_grad = 0
+                    else:
+                        relu_kappa_low_grad = 1
+
+                    critic_weight_tensor_change = -self.critic_learn_rate * (
+                        self.critic_obj_grad(critic_weight_tensor)
+                        + self.calf_decay_constraint_penalty_grad(
+                            self.critic_weight_tensor, observation, action
+                        )
+                        + self.calf_penalty_coeff
+                        * self.critic_model_grad(
+                            critic_weight_tensor, observation, action
+                        )
+                        * relu_kappa_low_grad
+                        + self.calf_penalty_coeff
+                        * self.critic_model_grad(
+                            critic_weight_tensor, observation, action
+                        )
+                        * relu_kappa_up_grad
+                    )
+                    critic_weight_tensor += critic_weight_tensor_change
+
+            else:
+                critic_weight_tensor_change = minimize(
+                    self.critic_obj,
+                    critic_weight_tensor_change_start_guess[0],
+                    method=critic_opt_method,
+                    tol=1e-3,
+                    bounds=bounds,
+                    constraints=constraints,
+                    options=critic_opt_options,
+                ).x
+        else:
+            if use_grad_descent:
+                critic_weight_tensor_change = (
+                    -self.critic_learn_rate
+                    * self.critic_obj_grad(self.critic_weight_tensor)
+                )
+            else:
+                critic_weight_tensor_change = minimize(
+                    self.critic_obj(critic_weight_tensor_change),
+                    critic_weight_tensor_change_start_guess,
+                    method=critic_opt_method,
+                    tol=1e-3,
+                    bounds=bounds,
+                    options=critic_opt_options,
+                ).x
+
+        if check_persistence_of_excitation:
+            # Adjust the weight change by the replay condition number
+            critic_weight_tensor_change *= (
+                1
+                / np.linalg.cond(self.observation_buffer)
+                * 1
+                / np.linalg.cond(self.action_buffer)
+            )
+
+        return np.clip(
+            self.critic_weight_tensor + critic_weight_tensor_change,
+            self.critic_weight_min,
+            self.critic_weight_max,
+        )
+
+    def actor_obj(self, action_change, critic_weight_tensor, observation):
+        """
+        Objective function for actor learning.
+
+        """
+
+        return self.critic_model(
+            critic_weight_tensor, observation, self.action_curr + action_change
+        )
+
+    def get_optimized_action(self, critic_weight_tensor, observation):
+
+        actor_opt_method = "SLSQP"
+        if actor_opt_method == "trust-constr":
+            actor_opt_options = {
+                "maxiter": 40,
+                "disp": False,
+            }  #'disp': True, 'verbose': 2}
+        else:
+            actor_opt_options = {
+                "maxiter": 40,
+                "maxfev": 60,
+                "disp": False,
+                "adaptive": True,
+                "xatol": 1e-3,
+                "fatol": 1e-3,
+            }  # 'disp': True, 'verbose': 2}
+
+        action_change_start_guess = np.zeros(self.dim_action)
+
+        bounds = sp.optimize.Bounds(
+            self.action_min, self.action_max, keep_feasible=True
+        )
+
+        action_change = minimize(
+            lambda action_change: self.actor_obj(
+                action_change, critic_weight_tensor, observation
+            ),
+            action_change_start_guess,
+            method=actor_opt_method,
+            tol=1e-3,
+            bounds=bounds,
+            options=actor_opt_options,
+        ).x
+
+        return self.action_curr + action_change
+
+    def calf_filter(self, critic_weight_tensor, observation, action):
+        """
+        If CALF constraints are satisfied, put the specified action through and update the CALF's state
+        (safe weights, observation and action).
+        Otherwise, return a safe action, do not update the CALF's state.
+
+        """
+
+        critic_low_kappa = self.critic_low_kappa_coeff * norm(observation) ** 2
+        critic_up_kappa = self.critic_up_kappa_coeff * norm(observation) ** 2
+
+        sample = np.random.rand()
+
+        if (
+            -self.critic_max_desired_decay
+            <= self.calf_diff(critic_weight_tensor, observation, action)
+            <= -self.critic_desired_decay
+            and critic_low_kappa
+            <= self.critic_model(
+                critic_weight_tensor,
+                observation,
+                action,
+            )
+            <= critic_up_kappa
+            or sample <= self.relax_probability
+        ):
+
+            self.critic_weight_tensor_safe = critic_weight_tensor
+            self.observation_safe = observation
+            self.action_safe = action
+
+            self.observation_buffer_safe = push_vec(
+                self.observation_buffer_safe, observation
+            )
+            self.action_buffer_safe = push_vec(self.action_buffer_safe, action)
+
+            self.calf_count += 1
+
+            return action
+
+        else:
+
+            self.safe_count += 1
+            return self.get_safe_action(observation)
+
+    def get_safe_action(self, observation: np.ndarray) -> np.ndarray:
+        return self.nominal_ctrl.get_action(observation)
+
+    @apply_callbacks()
+    def post_obj_run(self, current_value, running_objective):
+        return {
+            "running_objective": running_objective,
+            "current_value": current_value
+        }
+
+    def get_action(self, observation: np.ndarray) -> np.ndarray:
+
+        # Update replay buffers
+        self.action_buffer = push_vec(self.action_buffer, self.action_curr)
+        self.observation_buffer = push_vec(self.observation_buffer, observation)
+
+        # Update score (cumulative objective)
+
+        run_obj_score = self.run_obj(observation, self.action_curr)
+        self.score += (
+            run_obj_score * self.action_sampling_time
+        )
+        self.post_obj_run(run_obj_score, self.score)
+
+        # Update action
+        new_action = self.get_optimized_action(self.critic_weight_tensor, observation)
+
+        # Compute new critic weights
+        self.critic_weight_tensor = self.get_optimized_critic_weights(
+            observation,
+            self.action_curr,
+            use_calf_constraints=True,
+            use_grad_descent=True,
+            use_kappa_constraint=True
+        )
+
+        # Apply CALF filter that checks constraint satisfaction and updates the CALF's state
+        action = self.calf_filter(self.critic_weight_tensor, observation, new_action)
+
+        # DEBUG
+        # action = self.get_safe_action(observation)
+        # /DEBUG
+
+        # Apply action bounds
+        action = np.clip(
+            action,
+            self.action_min,
+            self.action_max,
+        )
+
+        # Force proper dimensionsing according to the convention
+        action = to_row_vec(action)
+
+        # Update current action
+        self.action_curr = action
+
+        # DEBUG
+        np.set_printoptions(precision=3)
+
+        if self.debug_print_counter % 10 == 0:
+            print(
+                "--DEBUG-- reward: %4.2f score: %4.2f"
+                % (-self.run_obj(observation, action), -self.score)
+            )
+            print("--DEBUG-- critic weights:", self.critic_weight_tensor)
+            print("--DEBUG-- CALF counter:", self.calf_count)
+            print("--DEBUG-- Safe counter:", self.safe_count)
+
+        self.debug_print_counter += 1
+
+        # /DEBUG
+
+        return action

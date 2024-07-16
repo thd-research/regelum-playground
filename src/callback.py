@@ -1,4 +1,5 @@
-from regelum.callback import ScenarioStepLogger
+from regelum.callback import ScenarioStepLogger, ObjectiveTracker
+from regelum.policy import Policy
 from src.scenario import RosMPC
 
 from typing import Dict, Any
@@ -30,3 +31,20 @@ class ROSScenarioStepLogger(ScenarioStepLogger):
         except Exception as err:
             print(err)
             print("Error Here")
+
+class MyObjectiveTracker(ObjectiveTracker):
+    def is_target_event(self, obj, method, output, triggers):
+        return (
+            isinstance(obj, Policy)
+            and method == "post_obj_run"
+        )
+
+    def is_done_collecting(self):
+        return hasattr(self, "objective")
+
+    def on_function_call(self, obj, method, output):
+        # print("post_obj_run:", output["running_objective"], output["current_value"])
+        self.running_objective = output["running_objective"]
+        self.value = output["current_value"]
+        self.objective = np.array([self.value, self.running_objective])
+        self.objective_naming = ["Value", "Running objective"]

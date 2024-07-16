@@ -30,7 +30,7 @@ else
                 -v $ROOT_DIR/turtlebot3_ws:/turtlebot3_ws \
                 -v $ROOT_DIR/../regelum-playground:/regelum-playground \
                 -v $ROOT_DIR/../regelum-control:/regelum-control \
-                -v $ROOT_DIR/../rcognita-edu:/rcognita-edu \
+                -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
                --net=host \
                --privileged \
                --name ros-regelum ros-regelum-img
