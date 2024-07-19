@@ -32,8 +32,10 @@ class ThreeWheeledRobotAnimationWithNewLims(ThreeWheeledRobotAnimation):
         super().setup()
 
     def lim(self, *args, **kwargs):
-        self.ax.set_xlim(-4, 4)
-        self.ax.set_ylim(-4, 4)
+        self.ax.set_xlim(-1.2, 0.2)
+        self.ax.set_ylim(-1.2, 0.2)
+        # self.ax.set_xlim(-4, 4)
+        # self.ax.set_ylim(-4, 4)
         pass
 
 
@@ -83,6 +85,8 @@ class ThreeWheeledRobotAnimationWithSpotNewLims(ThreeWheeledRobotAnimationWithSp
         super().setup(config_file_name="mpc_scenario_customized.yaml")
 
     def lim(self, *args, **kwargs):
-        self.ax.set_xlim(-4, 4)
-        self.ax.set_ylim(-4, 4)
+        # self.ax.set_xlim(-4, 4)
+        # self.ax.set_ylim(-4, 4)
+        self.ax.set_xlim(-1.2, 0.2)
+        self.ax.set_ylim(-1.2, 0.2)
         pass
