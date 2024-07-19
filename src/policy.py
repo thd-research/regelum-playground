@@ -642,7 +642,7 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         self.critic_struct = "quad-mix"
 
-        critic_big_number = 1e5
+        critic_big_number = 1e4
 
         if self.critic_struct == "quad-lin":
             self.dim_critic = int(
@@ -709,7 +709,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             [self.buffer_size, self.dim_observation]
         )
 
-        self.calf_penalty_coeff = 0.05
+        self.calf_penalty_coeff = 0.5
 
         self.calf_count = 0
         self.safe_count = 0
@@ -1164,21 +1164,26 @@ class ThreeWheeledRobotCALFQ(Policy):
         critic_up_kappa = self.critic_up_kappa_coeff * norm(observation) ** 2
 
         sample = np.random.rand()
-
-        if (
-            -self.critic_max_desired_decay
-            <= self.calf_diff(critic_weight_tensor, observation, action)
+        condition_1 = -self.critic_max_desired_decay \
+            <= self.calf_diff(critic_weight_tensor, observation, action) \
             <= -self.critic_desired_decay
-            and critic_low_kappa
-            <= self.critic_model(
-                critic_weight_tensor,
-                observation,
-                action,
-            )
-            <= critic_up_kappa
+        
+        condition_2 = critic_low_kappa \
+                        <= self.critic_model(
+                            critic_weight_tensor,
+                            observation,
+                            action,
+                        ) \
+                        <= critic_up_kappa
+        
+        print("Condition 1: {} - value: {}".format(condition_1, self.calf_diff(critic_weight_tensor, observation, action))) 
+        print("Condition 2: {} - value: {}".format(condition_2, self.critic_model(critic_weight_tensor, observation, action)))
+        print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
+        if (
+            condition_1
+            and condition_2
             or sample <= self.relax_probability
         ):
-
             self.critic_weight_tensor_safe = critic_weight_tensor
             self.observation_safe = observation
             self.action_safe = action
@@ -1229,7 +1234,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             observation,
             self.action_curr,
             use_calf_constraints=True,
-            use_grad_descent=True,
+            use_grad_descent=False,
             use_kappa_constraint=True
         )
 
