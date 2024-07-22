@@ -15,7 +15,7 @@ from regelum.predictor import Predictor, EulerPredictor
 from regelum.critic import CriticTrivial
 from regelum.model import ModelWeightContainer
 from regelum.optimizable.core.configs import CasadiOptimizerConfig
-from regelum.scenario import RLScenario
+from regelum.scenario import RLScenario, Scenario
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -426,3 +426,19 @@ class RosMPC(RLScenario):
                 optimizer_config=CasadiOptimizerConfig(),
             ),
         )
+
+class MyScenario(Scenario):
+    def run_episode(self, episode_counter, iteration_counter):
+        self.episode_counter = episode_counter
+        self.iteration_counter = iteration_counter
+        while self.sim_status != "episode_ended":
+            self.sim_status = self.step()
+            
+            if np.linalg.norm(self.observation[0,:2]) < 0.01:
+                break
+    
+    def calculate_value(self, running_objective: float, time: float):
+        if hasattr(self.policy, "score"):
+            return self.policy.score
+        else:
+            return 0

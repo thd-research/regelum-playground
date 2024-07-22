@@ -880,6 +880,53 @@ class ThreeWheeledRobotCALFQ(Policy):
         # )
 
         return result
+    
+    def critic_obj_2(self, critic_weight_tensor):
+        """
+        Objective function for critic learning.
+
+        Uses value iteration format where previous weights are assumed different from the ones being optimized.
+
+        """
+        critic_weight_tensor_pivot = self.critic_weight_tensor_safe
+
+        result = 0
+
+        for k in range(self.buffer_size - 1, 0, -1):
+            # Python's array slicing may return 1D arrays, but we don't care here
+            observation_prev = self.observation_buffer[k - 1, :]
+            observation_next = self.observation_buffer[k, :]
+            action_prev = self.action_buffer[k - 1, :]
+            action_next = self.action_buffer[k, :]
+
+            # observation_prev_safe = self.observation_buffer_safe[k-1, :]
+            # observation_next_safe = self.observation_buffer_safe[k, :]
+            # action_prev_safe = self.action_buffer_safe[k-1, :]
+            # action_next_safe = self.action_buffer_safe[k, :]
+
+            critic_prev = self.critic_model(
+                critic_weight_tensor, observation_prev, action_prev
+            )
+            critic_next = self.critic_model(
+                critic_weight_tensor_pivot, observation_next, action_next
+            )
+
+            temporal_error = (
+                critic_prev
+                - self.discount_factor * critic_next
+                - self.run_obj(observation_prev, action_prev)
+            )
+
+            result += 1 / 2 * temporal_error**2
+
+        # result += (
+        #     1
+        #     / 2
+        #     * self.critic_weight_change_penalty_coeff
+        #     * norm(critic_weight_tensor_change) ** 2
+        # )
+
+        return result
 
     def critic_obj_grad(self, critic_weight_tensor):
         """
@@ -1011,7 +1058,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                     observation=observation,
                     action=action,
                 ),
-                -np.inf, #-self.critic_max_desired_decay,
+                -self.critic_max_desired_decay,
                 -self.critic_desired_decay,
             )
         )
@@ -1034,6 +1081,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         )
 
         critic_weight_tensor_change_start_guess = to_row_vec(np.zeros(self.dim_critic))
+        critic_weight_tensor_start_guess = to_row_vec(np.zeros(self.dim_critic))
 
         if use_calf_constraints:
             if use_grad_descent:
@@ -1076,9 +1124,9 @@ class ThreeWheeledRobotCALFQ(Policy):
                     critic_weight_tensor += critic_weight_tensor_change
 
             else:
-                critic_weight_tensor_change = minimize(
-                    self.critic_obj,
-                    critic_weight_tensor_change_start_guess[0],
+                critic_weight_tensor = minimize(
+                    self.critic_obj_2,
+                    critic_weight_tensor_start_guess[0],
                     method=critic_opt_method,
                     tol=1e-3,
                     bounds=bounds,
@@ -1111,7 +1159,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             )
 
         return np.clip(
-            self.critic_weight_tensor + critic_weight_tensor_change,
+            critic_weight_tensor,
             self.critic_weight_min,
             self.critic_weight_max,
         )
@@ -1133,7 +1181,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         """        
         # System observation prediction
         state = observation
-        next_state = state[0] + self.action_sampling_time * 2 * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
+        next_state = state[0] + self.action_sampling_time * 10 * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
         _observation = np.expand_dims(next_state, axis=0)
 
         J = 0
@@ -1232,28 +1280,12 @@ class ThreeWheeledRobotCALFQ(Policy):
                         <= critic_up_kappa
         
         _, critic_new, critic_safe = self.calf_diff(critic_weight_tensor, observation, action, debug=True)
-        
         if (
-            condition_1
-            and condition_2
+            (condition_1
+             and condition_2
+             and norm(observation[0, :2]) > 0.2)
             or sample <= self.relax_probability
         ):
-            print("\033[93m") # Color it to indicate CALF
-            print("new", critic_weight_tensor, observation, action)
-            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
-            print("calf_diff", critic_new, critic_safe)
-            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
-                condition_1, 
-                self.calf_diff(critic_weight_tensor, observation, action),
-                -self.critic_max_desired_decay,
-                -self.critic_desired_decay
-                )) 
-            print("Condition 2: {} - value: {}".format(
-                condition_2, 
-                self.critic_model(critic_weight_tensor, observation, action)
-                ))
-            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
-            
             self.critic_weight_tensor_safe = critic_weight_tensor
             self.observation_safe = observation
             self.action_safe = action
@@ -1267,22 +1299,6 @@ class ThreeWheeledRobotCALFQ(Policy):
             return action
 
         else:
-            print("\033[0m")
-            print("new", critic_weight_tensor, observation, action)
-            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
-            print("calf_diff", critic_new, critic_safe)
-            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
-                condition_1, 
-                self.calf_diff(critic_weight_tensor, observation, action),
-                -self.critic_max_desired_decay,
-                -self.critic_desired_decay
-                )) 
-            print("Condition 2: {} - value: {}".format(
-                condition_2, 
-                self.critic_model(critic_weight_tensor, observation, action)
-                ))
-            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
-
             self.safe_count += 1
             return self.get_safe_action(observation)
 
@@ -1359,3 +1375,6 @@ class ThreeWheeledRobotCALFQ(Policy):
         # /DEBUG
 
         return action
+
+    def reset(self):
+        pass
