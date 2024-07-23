@@ -176,3 +176,8 @@ class RosTurtlebot(CasADi):
         self.state = self.new_state
         pass
 
+class MySimulator(CasADi):
+    def reset(self):
+        super().reset()
+
+        

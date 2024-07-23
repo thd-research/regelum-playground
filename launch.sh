@@ -7,5 +7,5 @@ python3.10 run.py policy=rc_calfq \
                   scenario=my_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
-                  simulator.time_final=10 scenario.N_iterations=20 \
-                  --interactive --fps=10 --jobs=1
+                  simulator.time_final=10 scenario.N_iterations=100 \
+                  --interactive --fps=10

@@ -442,3 +442,9 @@ class MyScenario(Scenario):
             return self.policy.score
         else:
             return 0
+    
+    def reset_iteration(self):
+        self.policy.reset()
+        return super().reset_iteration()
+        
+

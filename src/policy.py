@@ -603,7 +603,8 @@ class ThreeWheeledRobotCALFQ(Policy):
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
-        R1_diag = [1, 10, 1, 0, 0]
+        # R1_diag = [1, 10, 1, 0, 0]
+        R1_diag = [1, 1, 1e-1, 0, 0]
         self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds)
 
         self.action_min = np.array( action_bounds[:,0] )
@@ -628,7 +629,6 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.observation_init = self.state_init
         self.action_init = self.system.apply_action_bounds(self.get_safe_action(self.state_init))
         self.action_curr = self.action_init
-        self.action_sqn_init = repmat( self.action_init , 1, self.Nactor)
 
         self.action_sampling_time = 0.01  # Taken from common/inv_pendulum config
 
@@ -641,6 +641,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.observation_buffer = repmat(self.observation_init, self.buffer_size, 1)
 
         self.score = 0
+        self.score_safe = np.inf
 
         # Critic
         self.critic_learn_rate = 0.1
@@ -684,8 +685,9 @@ class ThreeWheeledRobotCALFQ(Policy):
             np.random.uniform(1, critic_big_number / 10, size=self.dim_critic)
         )
         self.critic_weight_tensor = self.critic_weight_tensor_init
-
         self.critic_weight_change_penalty_coeff = 1.0
+
+        self.critic_buffer_safe = []
 
         # CALFQ
 
@@ -695,6 +697,8 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         # Probability to take CALF action even when CALF constraints are not satisfied
         self.relax_probability = 0.0
+
+        self.critic_init_fading_factor = 0.8
 
         self.critic_weight_tensor_safe = self.critic_weight_tensor_init
         self.observation_safe = self.observation_init
@@ -1058,7 +1062,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                     observation=observation,
                     action=action,
                 ),
-                -self.critic_max_desired_decay,
+                -np.inf,
                 -self.critic_desired_decay,
             )
         )
@@ -1126,7 +1130,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             else:
                 critic_weight_tensor = minimize(
                     self.critic_obj_2,
-                    critic_weight_tensor_start_guess[0],
+                    to_row_vec(self.critic_weight_tensor_init)[0],
                     method=critic_opt_method,
                     tol=1e-3,
                     bounds=bounds,
@@ -1181,18 +1185,14 @@ class ThreeWheeledRobotCALFQ(Policy):
         """        
         # System observation prediction
         state = observation
-        next_state = state[0] + self.action_sampling_time * 10 * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
+        next_state = state[0] + self.action_sampling_time * 1 * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
         _observation = np.expand_dims(next_state, axis=0)
 
-        J = 0
-        for k in range(self.Nactor):  
-            for k in range(self.Nactor):                
-                Q = self.critic_model(
-                        critic_weight_tensor, _observation, action
-                    )
-                J += Q 
+        Q = self.critic_model(
+                critic_weight_tensor, _observation, action
+            )
 
-        return J
+        return Q
 
     def get_optimized_action(self, critic_weight_tensor, observation):
 
@@ -1286,10 +1286,27 @@ class ThreeWheeledRobotCALFQ(Policy):
              and norm(observation[0, :2]) > 0.2)
             or sample <= self.relax_probability
         ):
+            print("\033[93m") # Color it to indicate CALF
+            print("new", critic_weight_tensor, observation, action)
+            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
+            print("calf_diff", critic_new, critic_safe)
+            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
+                condition_1, 
+                self.calf_diff(critic_weight_tensor, observation, action),
+                -self.critic_max_desired_decay,
+                -self.critic_desired_decay
+                )) 
+            print("Condition 2: {} - value: {}".format(
+                condition_2, 
+                self.critic_model(critic_weight_tensor, observation, action)
+                ))
+            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
+            
             self.critic_weight_tensor_safe = critic_weight_tensor
             self.observation_safe = observation
             self.action_safe = action
 
+            self.critic_buffer_safe.append(critic_weight_tensor)
             self.observation_buffer_safe = push_vec(
                 self.observation_buffer_safe, observation
             )
@@ -1299,6 +1316,22 @@ class ThreeWheeledRobotCALFQ(Policy):
             return action
 
         else:
+            print("\033[0m")
+            print("new", critic_weight_tensor, observation, action)
+            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
+            print("calf_diff", critic_new, critic_safe)
+            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
+                condition_1, 
+                self.calf_diff(critic_weight_tensor, observation, action),
+                -self.critic_max_desired_decay,
+                -self.critic_desired_decay
+                )) 
+            print("Condition 2: {} - value: {}".format(
+                condition_2, 
+                self.critic_model(critic_weight_tensor, observation, action)
+                ))
+            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
+
             self.safe_count += 1
             return self.get_safe_action(observation)
 
@@ -1377,4 +1410,47 @@ class ThreeWheeledRobotCALFQ(Policy):
         return action
 
     def reset(self):
-        pass
+        self.action_init = self.system.apply_action_bounds(self.get_safe_action(self.state_init))
+        self.action_curr = self.action_init
+
+        self.action_buffer = repmat(self.action_init, self.buffer_size, 1)
+        self.observation_buffer = repmat(self.observation_init, self.buffer_size, 1)
+
+        self.observation_safe = self.observation_init
+        self.action_safe = self.action_init
+
+##############################################################################  Reset last good buffers
+        self.action_buffer_safe = np.zeros([self.buffer_size, self.dim_action])
+        self.observation_buffer_safe = np.zeros([self.buffer_size, self.dim_observation])
+##############################################################################
+
+        self.calf_count = 0
+        self.safe_count = 0
+
+        total_sum = 0
+        N = len(self.critic_buffer_safe)  
+        for i, w_i in enumerate(self.critic_buffer_safe, start=0):
+            total_sum += (self.critic_init_fading_factor ** i) * w_i
+            print(f"weight {i}:", w_i)
+        if N != 0:
+            weighted_average = total_sum / N
+        else:
+            weighted_average = self.critic_weight_tensor
+
+        Delta_w =  weighted_average - self.critic_weight_tensor_init
+
+        if self.score <= self.score_safe: 
+            print(f"Final cost:    {self.score:.2f}" + f"    Best cost:    {self.score_safe:.2f}")
+            self.score_safe = self.score
+            self.critic_weight_tensor_safe_init = self.critic_weight_tensor_init.copy()
+            self.critic_weight_tensor_init = self.critic_weight_tensor_init + self.calf_penalty_coeff * Delta_w
+        else:
+            self.critic_weight_tensor_init = self.critic_weight_tensor_safe_init + \
+                self.calf_penalty_coeff * np.clip(self.critic_weight_max/5 * np.random.normal(size=self.dim_critic), 
+                                                  self.critic_weight_min, self.critic_weight_max)
+            
+        print("critic_weight_tensor_init: ", self.critic_weight_tensor_init)
+
+        self.critic_weight_tensor_safe = self.critic_weight_tensor_init
+        self.score = 0
+        self.critic_buffer_safe.clear()
