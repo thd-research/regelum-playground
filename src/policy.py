@@ -649,7 +649,7 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         self.critic_struct = "quad-mix"
 
-        critic_big_number = 1e4
+        critic_big_number = 1e3
 
         if self.critic_struct == "quad-lin":
             self.dim_critic = int(
@@ -766,7 +766,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             [to_row_vec(observation), to_row_vec(action)]
         )
 
-        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=1e3)
+        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=1e1)
         result = observation_action @ self.run_obj_param_tensor @ observation_action.T + penalty
 
         return to_scalar(result)
@@ -802,7 +802,7 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         result = critic_weight_tensor @ feature_tensor.T
 
-        return to_scalar(result)
+        return to_scalar(result) 
 
     def critic_model_grad(self, critic_weight_tensor, observation, action):
 
@@ -1326,9 +1326,11 @@ class ThreeWheeledRobotCALFQ(Policy):
                 -self.critic_max_desired_decay,
                 -self.critic_desired_decay
                 )) 
-            print("Condition 2: {} - value: {}".format(
+            print("Condition 2: {} - value: {} - LKappa: {} - UKappa: {}".format(
                 condition_2, 
-                self.critic_model(critic_weight_tensor, observation, action)
+                self.critic_model(critic_weight_tensor, observation, action),
+                critic_low_kappa,
+                critic_up_kappa
                 ))
             print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
 
@@ -1428,18 +1430,21 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.safe_count = 0
 
         total_sum = 0
+        weight_list = []
+
         N = len(self.critic_buffer_safe)  
         for i, w_i in enumerate(self.critic_buffer_safe, start=0):
-            total_sum += (self.critic_init_fading_factor ** i) * w_i
+            weight_list.append(self.critic_init_fading_factor ** i)
+            total_sum += weight_list[-1] * w_i
             print(f"weight {i}:", w_i)
         if N != 0:
-            weighted_average = total_sum / N
+            weighted_average = total_sum / np.sum(weight_list)
         else:
             weighted_average = self.critic_weight_tensor
 
         Delta_w =  weighted_average - self.critic_weight_tensor_init
 
-        if self.score <= self.score_safe: 
+        if self.score <= self.score_safe:
             print(f"Final cost:    {self.score:.2f}" + f"    Best cost:    {self.score_safe:.2f}")
             self.score_safe = self.score
             self.critic_weight_tensor_safe_init = self.critic_weight_tensor_init.copy()
