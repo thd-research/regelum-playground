@@ -612,7 +612,8 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         critic_big_number = 1e3
 
-        self.action_sampling_time = 0.01  # Taken from common/inv_pendulum config
+        self.action_sampling_time = 0.1  # Taken from common/inv_pendulum config
+        self.step_size_multiplier = 1
         self.discount_factor = 0.9
         self.buffer_size = 20
 
@@ -632,7 +633,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_low_kappa_coeff = 1e-1
         self.critic_up_kappa_coeff = 1e3
         # Nominal desired step-wise decay of critic
-        self.critic_desired_decay = 1e-4 * self.action_sampling_time
+        self.critic_desired_decay = 1e-5 * self.action_sampling_time
         # Maximal desired step-wise decay of critic
         self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
         self.critic_weight_change_penalty_coeff = 1.0
@@ -695,7 +696,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             self.critic_weight_max = critic_big_number
 
         self.critic_weight_tensor_init = to_row_vec(
-            np.random.uniform(1, critic_big_number / 10, size=self.dim_critic)
+            np.random.uniform(10, critic_big_number, size=self.dim_critic)
         )
         self.critic_weight_tensor = self.critic_weight_tensor_init
         self.critic_buffer_safe = []
@@ -882,6 +883,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         Uses value iteration format where previous weights are assumed different from the ones being optimized.
 
         """
+        ############################################################ Only focus on this
         critic_weight_tensor_pivot = self.critic_weight_tensor_safe
 
         result = 0
@@ -919,6 +921,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         #     * self.critic_weight_change_penalty_coeff
         #     * norm(critic_weight_tensor_change) ** 2
         # )
+
+        ############################################################
 
         return result
 
@@ -1114,7 +1118,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                 ############################################################ Only focus on this
                 critic_weight_tensor = minimize(
                     self.critic_obj_2,
-                    to_row_vec(self.critic_weight_tensor_init)[0],
+                    to_row_vec(self.critic_weight_tensor_safe)[0],
                     method=critic_opt_method,
                     tol=1e-3,
                     bounds=bounds,
@@ -1168,15 +1172,17 @@ class ThreeWheeledRobotCALFQ(Policy):
         Objective function for actor learning.
 
         """        
+        ############################################################ Only focus on this
         # System observation prediction
         state = observation
-        next_state = state[0] + self.action_sampling_time * 1 * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
+        next_state = state[0] + self.action_sampling_time * self.step_size_multiplier * self.system.compute_state_dynamics(0., state[0], action, _native_dim=True)  # Euler scheme
         _observation = np.expand_dims(next_state, axis=0)
 
         Q = self.critic_model(
                 critic_weight_tensor, _observation, action
             )
 
+        ############################################################
         return Q
 
     def get_optimized_action(self, critic_weight_tensor, observation):
@@ -1423,6 +1429,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             total_sum += weight_list[-1] * w_i
             print(f"weight {i}:", w_i)
         if N != 0:
+            # weighted_average = total_sum / N
             weighted_average = total_sum / np.sum(weight_list)
         else:
             weighted_average = self.critic_weight_tensor
