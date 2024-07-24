@@ -603,8 +603,40 @@ class ThreeWheeledRobotCALFQ(Policy):
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
-        # R1_diag = [1, 10, 1, 0, 0]
         R1_diag = [1, 1, 1e-1, 0, 0]
+
+        # Critic
+        self.critic_learn_rate = 0.1
+        self.critic_num_grad_steps = 20
+        self.critic_struct = "quad-mix"
+
+        critic_big_number = 1e3
+
+        self.action_sampling_time = 0.01  # Taken from common/inv_pendulum config
+        self.discount_factor = 0.9
+        self.buffer_size = 20
+
+        # CALFQ
+        self.obstacle_x = -0.5
+        self.obstacle_y = -0.5
+        self.obstacle_sigma = 0.2
+
+        # Probability to take CALF action even when CALF constraints are not satisfied
+        self.relax_probability = 0.0
+        self.critic_init_fading_factor = 0.8
+        
+        self.score = 0
+        self.score_safe = np.inf
+        self.calf_penalty_coeff = 0.5
+
+        self.critic_low_kappa_coeff = 1e-1
+        self.critic_up_kappa_coeff = 1e3
+        # Nominal desired step-wise decay of critic
+        self.critic_desired_decay = 1e-4 * self.action_sampling_time
+        # Maximal desired step-wise decay of critic
+        self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
+        self.critic_weight_change_penalty_coeff = 1.0
+
         self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds)
 
         self.action_min = np.array( action_bounds[:,0] )
@@ -618,10 +650,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.dim_state = system.dim_observation
         self.dim_action = system.dim_inputs
         self.dim_observation = self.dim_state
-        self.Nactor = 1
-
-        self.action_sqn_min = repmat(self.action_min, 1, self.Nactor)
-        self.action_sqn_max = repmat(self.action_max, 1, self.Nactor)
+        self.dim_observation = self.dim_state
 
         # Taken from initial_conditions config
         # self.state_init = np.expand_dims(self.system.state, axis=0)
@@ -630,26 +659,10 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.action_init = self.system.apply_action_bounds(self.get_safe_action(self.state_init))
         self.action_curr = self.action_init
 
-        self.action_sampling_time = 0.01  # Taken from common/inv_pendulum config
-
         self.run_obj_param_tensor = np.diag(R1_diag)
 
-        self.discount_factor = 0.9
-
-        self.buffer_size = 20
         self.action_buffer = repmat(self.action_init, self.buffer_size, 1)
         self.observation_buffer = repmat(self.observation_init, self.buffer_size, 1)
-
-        self.score = 0
-        self.score_safe = np.inf
-
-        # Critic
-        self.critic_learn_rate = 0.1
-        self.critic_num_grad_steps = 20
-
-        self.critic_struct = "quad-mix"
-
-        critic_big_number = 1e3
 
         if self.critic_struct == "quad-lin":
             self.dim_critic = int(
@@ -685,44 +698,16 @@ class ThreeWheeledRobotCALFQ(Policy):
             np.random.uniform(1, critic_big_number / 10, size=self.dim_critic)
         )
         self.critic_weight_tensor = self.critic_weight_tensor_init
-        self.critic_weight_change_penalty_coeff = 1.0
-
         self.critic_buffer_safe = []
-
-        # CALFQ
-
-        self.obstacle_x = -0.5
-        self.obstacle_y = -0.5
-        self.obstacle_sigma = 0.2
-
-        # Probability to take CALF action even when CALF constraints are not satisfied
-        self.relax_probability = 0.0
-
-        self.critic_init_fading_factor = 0.8
 
         self.critic_weight_tensor_safe = self.critic_weight_tensor_init
         self.observation_safe = self.observation_init
         self.action_safe = self.action_init
 
-        print("normal", self.observation_init, self.action_init)
-        print("safe", self.observation_safe, self.action_safe)
-
-        # self.critic_weight_tensor_init_safe = self.critic_weight_tensor_init
-        # self.critic_weight_tensor_buffer_safe = []
-
-        self.critic_low_kappa_coeff = 1e-1
-        self.critic_up_kappa_coeff = 1e3
-        # Nominal desired step-wise decay of critic
-        self.critic_desired_decay = 1e-4 * self.action_sampling_time
-        # Maximal desired step-wise decay of critic
-        self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
-
         self.action_buffer_safe = np.zeros([self.buffer_size, self.dim_action])
         self.observation_buffer_safe = np.zeros(
             [self.buffer_size, self.dim_observation]
         )
-
-        self.calf_penalty_coeff = 0.5
 
         self.calf_count = 0
         self.safe_count = 0
@@ -1033,13 +1018,6 @@ class ThreeWheeledRobotCALFQ(Policy):
         use_kappa_constraint=False,
         check_persistence_of_excitation=False,
     ):
-
-        # def calf_kappa_constraint(observation, action, critic_weight_tensor):
-        #     # Force critic to respect lower and upper kappa bounds
-
-        #     # kappa_low(||s_t||) <= Q^w (s_t, a_t) <= kappa_up(||s_t||)
-        #     return self.critic_model(critic_weight_tensor, observation, action)
-
         # Optimization method of critic. Methods that respect constraints: BFGS, L-BFGS-B, SLSQP,
         # trust-constr, Powell
         critic_opt_method = "SLSQP"
@@ -1133,6 +1111,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                     critic_weight_tensor += critic_weight_tensor_change
 
             else:
+                ############################################################ Only focus on this
                 critic_weight_tensor = minimize(
                     self.critic_obj_2,
                     to_row_vec(self.critic_weight_tensor_init)[0],
@@ -1142,6 +1121,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                     constraints=constraints,
                     options=critic_opt_options,
                 ).x
+                ############################################################
         else:
             if use_grad_descent:
                 critic_weight_tensor_change = (
@@ -1237,6 +1217,7 @@ class ThreeWheeledRobotCALFQ(Policy):
 
             return self.action_curr + action_change
         else:
+            ############################################################ Only focus on this
             action_start_guess = np.zeros(self.dim_action)
 
             bounds = sp.optimize.Bounds(
@@ -1254,6 +1235,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                 options=actor_opt_options,
             ).x
 
+            ############################################################ Only focus on this
             return action
 
 
@@ -1273,8 +1255,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         #     <= self.calf_diff(critic_weight_tensor, observation, action) \
         #     <= -self.critic_desired_decay
         
-        condition_1 = self.calf_diff(critic_weight_tensor, observation, action) \
-            <= -self.critic_desired_decay
+        calf_diff, critic_new, critic_safe = self.calf_diff(critic_weight_tensor, observation, action, debug=True)
+
+        condition_1 = calf_diff <= -self.critic_desired_decay
         
         condition_2 = critic_low_kappa \
                         <= self.critic_model(
@@ -1284,8 +1267,6 @@ class ThreeWheeledRobotCALFQ(Policy):
                         ) \
                         <= critic_up_kappa
         
-        _, critic_new, critic_safe = self.calf_diff(critic_weight_tensor, observation, action, debug=True)
-
         self.log_params["critic_new"] = critic_new
         self.log_params["critic_safe"] = critic_safe
 
@@ -1351,13 +1332,6 @@ class ThreeWheeledRobotCALFQ(Policy):
     def get_safe_action(self, observation: np.ndarray) -> np.ndarray:
         return self.nominal_ctrl.get_action(observation)
 
-    @apply_callbacks()
-    def post_obj_run(self, current_value, running_objective):
-        return {
-            "running_objective": running_objective,
-            "current_value": current_value
-        }
-
     def get_action(self, observation: np.ndarray) -> np.ndarray:
 
         # Update replay buffers
@@ -1370,7 +1344,6 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.score += (
             self.current_score * self.action_sampling_time
         )
-        self.post_obj_run(self.current_score, self.score)
 
         # Update action
         new_action = self.get_optimized_action(self.critic_weight_tensor, observation)
@@ -1423,6 +1396,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         return action
 
     def reset(self):
+        ############################################################ Only focus on this
         self.action_init = self.system.apply_action_bounds(self.get_safe_action(self.state_init))
         self.action_curr = self.action_init
 
@@ -1432,10 +1406,10 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.observation_safe = self.observation_init
         self.action_safe = self.action_init
 
-##############################################################################  Reset last good buffers
+        ############################################################  Reset last good buffers
         self.action_buffer_safe = np.zeros([self.buffer_size, self.dim_action])
         self.observation_buffer_safe = np.zeros([self.buffer_size, self.dim_observation])
-##############################################################################
+        ############################################################
 
         self.calf_count = 0
         self.safe_count = 0
@@ -1470,3 +1444,4 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_weight_tensor_safe = self.critic_weight_tensor_init
         self.score = 0
         self.critic_buffer_safe.clear()
+        ############################################################
