@@ -726,6 +726,11 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         self.calf_count = 0
         self.safe_count = 0
+        self.log_params = {
+                "use_calf": 0,
+                "critic_new": 0,
+                "critic_safe": 0
+            }
 
         # Debugging
         self.debug_print_counter = 0
@@ -1280,6 +1285,10 @@ class ThreeWheeledRobotCALFQ(Policy):
                         <= critic_up_kappa
         
         _, critic_new, critic_safe = self.calf_diff(critic_weight_tensor, observation, action, debug=True)
+
+        self.log_params["critic_new"] = critic_new
+        self.log_params["critic_safe"] = critic_safe
+
         if (
             (condition_1
              and condition_2
@@ -1312,7 +1321,8 @@ class ThreeWheeledRobotCALFQ(Policy):
             )
             self.action_buffer_safe = push_vec(self.action_buffer_safe, action)
 
-            self.calf_count += 1
+            self.use_calf = 1
+            self.log_params["use_calf"] = 0
             return action
 
         else:
@@ -1335,6 +1345,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
 
             self.safe_count += 1
+            self.log_params["use_calf"] = 0
             return self.get_safe_action(observation)
 
     def get_safe_action(self, observation: np.ndarray) -> np.ndarray:
@@ -1355,11 +1366,11 @@ class ThreeWheeledRobotCALFQ(Policy):
 
         # Update score (cumulative objective)
 
-        run_obj_score = self.run_obj(observation, self.action_curr)
+        self.current_score = self.run_obj(observation, self.action_curr)
         self.score += (
-            run_obj_score * self.action_sampling_time
+            self.current_score * self.action_sampling_time
         )
-        self.post_obj_run(run_obj_score, self.score)
+        self.post_obj_run(self.current_score, self.score)
 
         # Update action
         new_action = self.get_optimized_action(self.critic_weight_tensor, observation)

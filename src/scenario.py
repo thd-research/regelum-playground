@@ -446,5 +446,22 @@ class MyScenario(Scenario):
     def reset_iteration(self):
         self.policy.reset()
         return super().reset_iteration()
+    
+    @apply_callbacks()
+    def post_compute_action(self, observation, estimated_state):
+        return {
+            "estimated_state": estimated_state,
+            "observation": observation,
+            "time": self.time,
+            "episode_id": self.episode_counter,
+            "iteration_id": self.iteration_counter,
+            "step_id": self.step_counter,
+            "action": self.get_action_from_policy(),
+            "running_objective": self.policy.score,
+            "current_value": self.policy.current_score,
+            "use_calf": self.policy.log_params["use_calf"],
+            "critic_new": self.policy.log_params["critic_new"],
+            "critic_safe": self.policy.log_params["critic_safe"]
+        }
         
 
