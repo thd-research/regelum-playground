@@ -1,4 +1,8 @@
-from regelum.callback import ScenarioStepLogger, ObjectiveTracker, HistoricalCallback
+from regelum.callback import (
+    ScenarioStepLogger, 
+    ObjectiveTracker, 
+    HistoricalDataCallback,
+    HistoricalCallback)
 from regelum.policy import Policy
 from src.scenario import RosMPC
 
@@ -55,23 +59,56 @@ class MyObjectiveTracker(ObjectiveTracker):
         self.objective_naming = ["Value", "Running objective"]
 
 
-class CALFScenarioStepLogger(ScenarioStepLogger):
+class CALFHistoricalDataCallback(HistoricalDataCallback):
+    def is_target_event(self, obj, method, output, triggers):
+        return isinstance(obj, MyScenario) and method == "post_compute_action"
+    
     def on_function_call(self, obj, method: str, output: Dict[str, Any]):
-        try:
-            with np.printoptions(precision=2, suppress=True):
-                self.log(
-                    f"runn. objective: {output['running_objective']:.2f}, "
-                    f"state est.: {output['estimated_state'][0]}, "
-                    f"observation: {output['observation'][0]}, "
-                    f"action: {output['action'][0]}, "
-                    f"value: {output['current_value']:.4f}, "
-                    f"time: {output['time']:.4f} ({100 * output['time']/obj.simulator.time_final:.1f}%), "
-                    f"episode: {int(output['episode_id'])}/{obj.N_episodes}, "
-                    f"iteration: {int(output['iteration_id'])}/{obj.N_iterations}"
-                )
-        except Exception as err:
-            print(err)
-            print("Error Here")
+        if self.observation_components_naming is None:
+            self.observation_components_naming = (
+                [
+                    f"observation_{i + 1}"
+                    for i in range(obj.simulator.system.dim_observation)
+                ]
+                if obj.simulator.system.observation_naming is None
+                else obj.simulator.system.observation_naming
+            )
+
+        if self.action_components_naming is None:
+            self.action_components_naming = (
+                [f"action_{i + 1}" for i in range(obj.simulator.system.dim_inputs)]
+                if obj.simulator.system.inputs_naming is None
+                else obj.simulator.system.inputs_naming
+            )
+
+        if self.state_components_naming is None:
+            self.state_components_naming = (
+                [f"state_{i + 1}" for i in range(obj.simulator.system.dim_state)]
+                if obj.simulator.system.state_naming is None
+                else obj.simulator.system.state_naming
+            )
+
+        if method == "post_compute_action":
+            self.add_datum(
+                {
+                    **{
+                        "time": output["time"],
+                        "running_objective": output["running_objective"],
+                        "current_value": output["current_value"],
+                        "episode_id": output["episode_id"],
+                        "iteration_id": output["iteration_id"],
+                    },
+                    **dict(zip(self.action_components_naming, output["action"][0])),
+                    **dict(
+                        zip(self.state_components_naming, output["estimated_state"][0])
+                    ),
+                    **{
+                        "use_calf": output.get("use_calf"),
+                        "critic_new": output.get("critic_new"),
+                        "critic_safe": output.get("critic_safe"),
+                    },
+                }
+            )
 
 
 class PolicyNumpyModelSaver(HistoricalCallback):
