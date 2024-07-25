@@ -1276,7 +1276,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.log_params["critic_new"] = critic_new
         self.log_params["critic_safe"] = critic_safe
 
-        if (
+        if False and (
             (condition_1
              and condition_2
              and norm(observation[0, :2]) > 0.2)
@@ -1291,7 +1291,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                 self.calf_diff(critic_weight_tensor, observation, action),
                 -self.critic_max_desired_decay,
                 -self.critic_desired_decay
-                )) 
+                ))
             print("Condition 2: {} - value: {}".format(
                 condition_2, 
                 self.critic_model(critic_weight_tensor, observation, action)

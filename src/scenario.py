@@ -443,6 +443,7 @@ class MyScenario(Scenario):
         else:
             return 0
     
+    @apply_callbacks()
     def reset_iteration(self):
         self.policy.reset()
         return super().reset_iteration()
