@@ -600,6 +600,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         # action_bounds: list[list[float]],
         system: Union[System],
         # R1_diag: list = [],
+        weight_path: str=None,
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])

@@ -9,7 +9,7 @@ import torch
 from typing import Union, Dict, Any
 from pathlib import Path
 from src.scenario import MyScenario
-from rich.logging import RichHandler
+# from rich.logging import RichHandler
 
 class ROSScenarioStepLogger(ScenarioStepLogger):
     def is_target_event(self, obj, method, output, triggers):
@@ -106,7 +106,7 @@ class PolicyNumpyModelSaver(HistoricalCallback):
 
 
 def save_model(
-    cls: Union[PolicyModelSaver],
+    cls: Union[PolicyNumpyModelSaver],
     numpy_array: np.ndarray,
     iteration_counter: int,
 ) -> None:
