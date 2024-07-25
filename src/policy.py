@@ -1276,7 +1276,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.log_params["critic_new"] = critic_new
         self.log_params["critic_safe"] = critic_safe
 
-        if False and (
+        if (
             (condition_1
              and condition_2
              and norm(observation[0, :2]) > 0.2)
