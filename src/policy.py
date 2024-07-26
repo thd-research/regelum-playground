@@ -1309,8 +1309,8 @@ class ThreeWheeledRobotCALFQ(Policy):
             )
             self.action_buffer_safe = push_vec(self.action_buffer_safe, action)
 
-            self.use_calf = 1
-            self.log_params["use_calf"] = 0
+            self.calf_count += 1
+            self.log_params["use_calf"] = 1
             return action
 
         else:
