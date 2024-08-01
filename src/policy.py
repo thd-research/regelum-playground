@@ -24,9 +24,10 @@ from .utilities import (
     uptria2vec,
     to_row_vec,
     to_scalar,
-    push_vec,
-    rep_mat
+    push_vec
     )
+
+import os
 
 # from regelum.animation import (
 #     ObjectiveAnimation
@@ -601,6 +602,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         system: Union[System],
         # R1_diag: list = [],
         weight_path: str=None,
+        critic_desired_decay: float=1e-5, 
+        critic_low_kappa_coeff: float=1e-1,
+        critic_up_kappa_coeff: float=1e3
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
@@ -631,10 +635,10 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.score_safe = np.inf
         self.calf_penalty_coeff = 0.5
 
-        self.critic_low_kappa_coeff = 1e-1
-        self.critic_up_kappa_coeff = 1e3
+        self.critic_low_kappa_coeff = critic_low_kappa_coeff
+        self.critic_up_kappa_coeff = critic_up_kappa_coeff
         # Nominal desired step-wise decay of critic
-        self.critic_desired_decay = 1e-5 * self.action_sampling_time
+        self.critic_desired_decay = critic_desired_decay * self.action_sampling_time
         # Maximal desired step-wise decay of critic
         self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
         self.critic_weight_change_penalty_coeff = 1.0
@@ -696,9 +700,13 @@ class ThreeWheeledRobotCALFQ(Policy):
             self.critic_weight_min = -critic_big_number
             self.critic_weight_max = critic_big_number
 
-        self.critic_weight_tensor_init = to_row_vec(
-            np.random.uniform(10, critic_big_number, size=self.dim_critic)
-        )
+        if weight_path is None or not os.path.exists(weight_path):
+            self.critic_weight_tensor_init = to_row_vec(
+                np.random.uniform(10, critic_big_number, size=self.dim_critic)
+            )
+        else:
+            self.critic_weight_tensor_init = np.load(weight_path)
+
         self.critic_weight_tensor = self.critic_weight_tensor_init
         self.critic_buffer_safe = []
 
@@ -1276,6 +1284,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         
         self.log_params["critic_new"] = critic_new
         self.log_params["critic_safe"] = critic_safe
+        self.log_params["critic_low_kappa"] = critic_low_kappa
+        self.log_params["critic_up_kappa"] = critic_up_kappa
+        self.log_params["calf_diff"] = calf_diff
 
         if (
             (condition_1

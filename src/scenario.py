@@ -462,7 +462,10 @@ class MyScenario(Scenario):
             "current_value": self.policy.current_score,
             "use_calf": self.policy.log_params["use_calf"],
             "critic_new": self.policy.log_params["critic_new"],
-            "critic_safe": self.policy.log_params["critic_safe"]
+            "critic_safe": self.policy.log_params["critic_safe"],
+            "critic_low_kappa": self.policy.log_params["critic_low_kappa"],
+            "critic_up_kappa": self.policy.log_params["critic_up_kappa"],
+            "calf_diff": self.policy.log_params["calf_diff"]
         }
         
 

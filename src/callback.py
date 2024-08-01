@@ -106,6 +106,9 @@ class CALFHistoricalDataCallback(HistoricalDataCallback):
                         "use_calf": output.get("use_calf"),
                         "critic_new": output.get("critic_new"),
                         "critic_safe": output.get("critic_safe"),
+                        "critic_low_kappa": output.get("critic_low_kappa"),
+                        "critic_up_kappa": output.get("critic_up_kappa"),
+                        "calf_diff": output.get("calf_diff"),
                     },
                 }
             )

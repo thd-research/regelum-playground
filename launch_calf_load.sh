@@ -9,6 +9,6 @@ python3.10 run.py policy=rc_calfq \
                   scenario=my_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
-                  simulator.time_final=10 scenario.N_iterations=100 \
+                  simulator.time_final=10 scenario.N_iterations=1 \
                   policy.weight_path=${CALF_MODEL_PATH} \
                   --interactive --fps=10
