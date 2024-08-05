@@ -22,7 +22,7 @@ def run_calf_hyperparameters():
             "simulator.time_final=20",
             "scenario.N_iterations=40",
             "--jobs=-1",
-            "--experiment=calf_hyper",
+            "--experiment=calf_hyper_0108_1612",
             "policy.critic_desired_decay={}".format(params["critic_desired_decays"]),
             "policy.critic_low_kappa_coeff={}".format(params["critic_low_kappa_coeffs"]),
             "policy.critic_up_kappa_coeff={}".format(params["critic_up_kappa_coeffs"]),
