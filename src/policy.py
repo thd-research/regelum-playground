@@ -604,7 +604,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         weight_path: str=None,
         critic_desired_decay: float=1e-5, 
         critic_low_kappa_coeff: float=1e-1,
-        critic_up_kappa_coeff: float=1e3
+        critic_up_kappa_coeff: float=1e3,
+        penalty_factor: float=1e1,
+        step_size_multiplier: int=1
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
@@ -618,7 +620,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         critic_big_number = 1e3
 
         self.action_sampling_time = 0.1  # Taken from common/inv_pendulum config
-        self.step_size_multiplier = 1
+        self.step_size_multiplier = step_size_multiplier
         self.discount_factor = 0.9
         self.buffer_size = 20
 
@@ -626,6 +628,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.obstacle_x = -0.5
         self.obstacle_y = -0.5
         self.obstacle_sigma = 0.2
+
+        self.penalty_factor = penalty_factor
 
         # Probability to take CALF action even when CALF constraints are not satisfied
         self.relax_probability = 0.0
@@ -766,7 +770,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             [to_row_vec(observation), to_row_vec(action)]
         )
 
-        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=1e1)
+        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=self.penalty_factor)
         result = observation_action @ self.run_obj_param_tensor @ observation_action.T + penalty
 
         return to_scalar(result)
