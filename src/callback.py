@@ -13,7 +13,8 @@ import torch
 from typing import Union, Dict, Any
 from pathlib import Path
 from src.scenario import MyScenario
-# from rich.logging import RichHandler
+from rich.logging import RichHandler
+
 
 class ROSScenarioStepLogger(ScenarioStepLogger):
     def is_target_event(self, obj, method, output, triggers):
@@ -156,3 +157,13 @@ def save_model(
         / f"model_it_{iteration_counter:05}.npy",
         numpy_array
     )
+
+
+class HandlerChecker(ScenarioStepLogger):
+    """A callback which allows to log every step of simulation in a scenario."""
+    def is_target_event(self, obj, method, output, triggers):
+        try:
+            if len(self._metadata["logger"].handlers) == 0:
+                self._metadata["logger"].addHandler(RichHandler())
+        except Exception as err:
+            print("Error:", err)

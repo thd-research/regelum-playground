@@ -12,6 +12,7 @@ callbacks:
   - regelum.callback.ValueCallback
   - src.callback.PolicyNumpyModelSaver
   - src.callback.CALFHistoricalDataCallback
+  - src.callback.HandlerChecker
 
 rehydra:
   sweep:
