@@ -615,7 +615,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         # Critic
         self.critic_learn_rate = 0.1
         self.critic_num_grad_steps = 20
-        self.critic_struct = "quad-mix"
+        # self.critic_struct = "quad-mix"
+        self.critic_struct = "quad-nomix"
 
         critic_big_number = 1e3
 
@@ -1062,7 +1063,7 @@ class ThreeWheeledRobotCALFQ(Policy):
                     observation=observation,
                     action=action,
                 ),
-                -np.inf,
+                -self.critic_max_desired_decay, #np.inf,
                 -self.critic_desired_decay,
             )
         )

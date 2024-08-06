@@ -10,7 +10,6 @@ callbacks:
   - regelum.callback.ScenarioStepLogger
   # - regelum.callback.HistoricalDataCallback
   - regelum.callback.ValueCallback
-  - src.callback.MyObjectiveTracker
   - src.callback.PolicyNumpyModelSaver
   - src.callback.CALFHistoricalDataCallback
 
