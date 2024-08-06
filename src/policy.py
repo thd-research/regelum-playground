@@ -1259,7 +1259,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             ).x
 
             ############################################################ Only focus on this
-            return action
+            return np.expand_dims(action, axis=0)
 
 
     def calf_filter(self, critic_weight_tensor, observation, action):
@@ -1389,13 +1389,23 @@ class ThreeWheeledRobotCALFQ(Policy):
         # DEBUG
         # action = self.get_safe_action(observation)
         # /DEBUG
+        dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
 
-        # Apply action bounds
-        action = np.clip(
-            action,
-            self.action_min,
-            self.action_max,
-        )
+        if dist_to_spot <= 0.1:
+            # Slow the robot down if robot is near the obstacle
+            action[0, 0] = np.clip(
+                action[0, 0],
+                -0.01,
+                0.01
+            )
+        else:    
+            # Apply action bounds
+            action = np.clip(
+                action,
+                self.action_min,
+                self.action_max,
+            )
+
 
         # Force proper dimensionsing according to the convention
         action = to_row_vec(action)
