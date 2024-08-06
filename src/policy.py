@@ -606,11 +606,14 @@ class ThreeWheeledRobotCALFQ(Policy):
         critic_low_kappa_coeff: float=1e-1,
         critic_up_kappa_coeff: float=1e3,
         penalty_factor: float=1e1,
-        step_size_multiplier: int=1
+        step_size_multiplier: int=1,
+        nominal_only: bool=False
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
         R1_diag = [1, 1, 1e-1, 0, 0]
+
+        self.nominal_only = nominal_only
 
         # Critic
         self.critic_learn_rate = 0.1
@@ -1293,27 +1296,27 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.log_params["critic_up_kappa"] = critic_up_kappa
         self.log_params["calf_diff"] = calf_diff
 
-        if (
+        if not self.nominal_only and (
             (condition_1
              and condition_2
              and norm(observation[0, :2]) > 0.2)
             or sample <= self.relax_probability
         ):
-            print("\033[93m") # Color it to indicate CALF
-            print("new", critic_weight_tensor, observation, action)
-            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
-            print("calf_diff", critic_new, critic_safe)
-            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
-                condition_1, 
-                self.calf_diff(critic_weight_tensor, observation, action),
-                -self.critic_max_desired_decay,
-                -self.critic_desired_decay
-                ))
-            print("Condition 2: {} - value: {}".format(
-                condition_2, 
-                self.critic_model(critic_weight_tensor, observation, action)
-                ))
-            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
+            # print("\033[93m") # Color it to indicate CALF
+            # print("new", critic_weight_tensor, observation, action)
+            # print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
+            # print("calf_diff", critic_new, critic_safe)
+            # print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
+            #     condition_1, 
+            #     self.calf_diff(critic_weight_tensor, observation, action),
+            #     -self.critic_max_desired_decay,
+            #     -self.critic_desired_decay
+            #     ))
+            # print("Condition 2: {} - value: {}".format(
+            #     condition_2, 
+            #     self.critic_model(critic_weight_tensor, observation, action)
+            #     ))
+            # print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
             
             self.critic_weight_tensor_safe = critic_weight_tensor
             self.observation_safe = observation
@@ -1330,23 +1333,23 @@ class ThreeWheeledRobotCALFQ(Policy):
             return action
 
         else:
-            print("\033[0m")
-            print("new", critic_weight_tensor, observation, action)
-            print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
-            print("calf_diff", critic_new, critic_safe)
-            print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
-                condition_1, 
-                self.calf_diff(critic_weight_tensor, observation, action),
-                -self.critic_max_desired_decay,
-                -self.critic_desired_decay
-                )) 
-            print("Condition 2: {} - value: {} - LKappa: {} - UKappa: {}".format(
-                condition_2, 
-                self.critic_model(critic_weight_tensor, observation, action),
-                critic_low_kappa,
-                critic_up_kappa
-                ))
-            print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
+            # print("\033[0m")
+            # print("new", critic_weight_tensor, observation, action)
+            # print("LG", self.critic_weight_tensor_safe, self.observation_safe, self.action_safe)
+            # print("calf_diff", critic_new, critic_safe)
+            # print("Condition 1: {} - value: {} - LSL: {} - USL: {}".format(
+            #     condition_1, 
+            #     self.calf_diff(critic_weight_tensor, observation, action),
+            #     -self.critic_max_desired_decay,
+            #     -self.critic_desired_decay
+            #     )) 
+            # print("Condition 2: {} - value: {} - LKappa: {} - UKappa: {}".format(
+            #     condition_2, 
+            #     self.critic_model(critic_weight_tensor, observation, action),
+            #     critic_low_kappa,
+            #     critic_up_kappa
+            #     ))
+            # print("critic_weight_tensor: {} - observation: {}, action: {}".format(critic_weight_tensor, observation, action))
 
             self.safe_count += 1
             self.log_params["use_calf"] = 0
