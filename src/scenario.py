@@ -467,5 +467,11 @@ class MyScenario(Scenario):
             "critic_up_kappa": self.policy.log_params["critic_up_kappa"],
             "calf_diff": self.policy.log_params["calf_diff"]
         }
+    
+    # this function need used with ROS simulator
+    def compute_action_sampled(self, time, estimated_state, observation):
+        tmp = super().compute_action_sampled(time, estimated_state, observation)
+        self.simulator.is_time_for_new_sample = self.is_time_for_new_sample
+        return tmp
         
 
