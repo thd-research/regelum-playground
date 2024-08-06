@@ -10,6 +10,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   simulator=ros \
                   policy=rc_calfq \
                   initial_conditions=3wrobot_kin_with_spot \
+                  +policy.nominal_kappa_params="[0.2, 1.5, -.15]" \
                   scenario=my_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \

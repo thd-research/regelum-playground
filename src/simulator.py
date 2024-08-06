@@ -192,6 +192,9 @@ class RosTurtlebot(CasADi):
         
         self.update_time()
 
+        if self.time >= self.time_final:
+            return -1
+        
         if rospy.is_shutdown():
             raise RuntimeError("Ros shutdowns")
 

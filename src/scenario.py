@@ -28,6 +28,14 @@ import math
 import traceback 
 
 
+class ROSMiddleScenario(Scenario):
+    # this function need used with ROS simulator
+    def compute_action_sampled(self, time, estimated_state, observation):
+        tmp = super().compute_action_sampled(time, estimated_state, observation)
+        self.simulator.is_time_for_new_sample = self.is_time_for_new_sample
+        return tmp
+        
+
 class ROSScenario(RegelumBase):
     def __init__(
         self,
@@ -427,7 +435,7 @@ class RosMPC(RLScenario):
             ),
         )
 
-class MyScenario(Scenario):
+class MyScenario(ROSMiddleScenario):
     def run_episode(self, episode_counter, iteration_counter):
         self.episode_counter = episode_counter
         self.iteration_counter = iteration_counter
@@ -468,10 +476,5 @@ class MyScenario(Scenario):
             "calf_diff": self.policy.log_params["calf_diff"]
         }
     
-    # this function need used with ROS simulator
-    def compute_action_sampled(self, time, estimated_state, observation):
-        tmp = super().compute_action_sampled(time, estimated_state, observation)
-        self.simulator.is_time_for_new_sample = self.is_time_for_new_sample
-        return tmp
-        
+
 

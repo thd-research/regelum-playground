@@ -443,9 +443,12 @@ class ThreeWheeledRobotNomial(Policy):
         action_bounds: list[list[float]],
         kappa_params: list[float] = [2, 15, -1.50],
         eps=0.01,
+        **kwargs
     ):
         super().__init__()
         self.action_bounds = action_bounds
+        print("self.action_bounds:", self.action_bounds)
+        print("kappa_params:", kappa_params)
         # An epsilon for numerical stability
         self.eps = eps
         self.update_kappa(*kappa_params)
@@ -607,7 +610,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         critic_up_kappa_coeff: float=1e3,
         penalty_factor: float=1e1,
         step_size_multiplier: int=1,
-        nominal_only: bool=False
+        nominal_only: bool=False,
+        nominal_kappa_params: list[float] = [2, 15, -1.50],
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
@@ -651,7 +655,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
         self.critic_weight_change_penalty_coeff = 1.0
 
-        self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds)
+        self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds,
+                                                    kappa_params=nominal_kappa_params)
 
         self.action_min = np.array( action_bounds[:,0] )
         self.action_max = np.array( action_bounds[:,1] )

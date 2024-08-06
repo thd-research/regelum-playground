@@ -10,3 +10,4 @@ critic_up_kappa_coeff: = 1e3
 penalty_factor: = 1e1
 step_size_multiplier: = 1
 nominal_only: = False
+nominal_kappa_params: = [2, 15, -1.50]

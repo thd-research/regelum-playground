@@ -8,7 +8,7 @@ python3.10 run.py +seed=7 \
                   scenario=my_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
-                  simulator.time_final=40 scenario.N_iterations=40 \
+                  simulator.time_final=40 scenario.N_iterations=1 \
                   --jobs=-1 \
                   --experiment=calf_inc_penalty \
                   policy.critic_desired_decay=1e-6 \
@@ -16,5 +16,5 @@ python3.10 run.py +seed=7 \
                   policy.critic_up_kappa_coeff=1e3 \
                   policy.penalty_factor=1e2 \
                   policy.step_size_multiplier=5 \
-                  policy.nominal_only=False \
+                  policy.nominal_only=True \
                   --interactive
