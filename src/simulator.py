@@ -27,13 +27,16 @@ class RosTurtlebot(CasADi):
                  atol: float | None = 0.00001, 
                  rtol: float | None = 0.001,
                  stop_if_reach_target: bool = False,
+                 use_phy_robot: bool=False
                  ):
         self.state_goal = state_goal
         self.rotation_counter = 0
         self.prev_theta = 0
         self.new_state = state_init
+        self.state_init = None
         self.eps = 0.005
         self.stop_if_reach_target = stop_if_reach_target
+        self.use_phy_robot = use_phy_robot
     
         # Topics
         rospy.init_node('ros_preset_node', log_level=rospy.INFO)
@@ -117,6 +120,9 @@ class RosTurtlebot(CasADi):
         if isinstance(self.system, ThreeWheeledRobotDynamic):
             self.new_state += [self._action[0, 0], self._action[0, 1]] # if hasattr(self, "_action") else [0, 0]
 
+        if self.state_init is None:
+            self.state_init = self.new_state
+
         self.new_state = np.expand_dims(self.new_state, axis=0)
         self.lock.release()
 
@@ -125,7 +131,8 @@ class RosTurtlebot(CasADi):
         if self.system.system_type == "diff_eqn":
             self.ODE_solver = self.initialize_ode_solver()
             self.time = 0.0
-            self.state = self.new_state
+            self.state = self.state_init
+            self.new_state = self.state_init
             self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.action_init
             )
@@ -134,11 +141,14 @@ class RosTurtlebot(CasADi):
             self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.system.inputs
             )
-        
+
         self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.rate = rospy.Rate(self.RATE)
         self.episode_start = None
-        subprocess.check_output(["python3.10", f"{Path(__file__).parent.resolve()}/reset_ros.py"])
+
+        if not self.use_phy_robot:
+            subprocess.check_output(["python3.10", f"{Path(__file__).parent.resolve()}/reset_ros.py"])
+
         self.receive_action(np.zeros_like(self._action))
 
         if hasattr(self, "_time_measurement"):

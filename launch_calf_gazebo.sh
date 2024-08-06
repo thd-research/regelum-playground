@@ -1,8 +1,3 @@
-# python3 run.py policy=3wrobot_MPC initial_conditions=3wrobot_kin system=3wrobot_kin common.sampling_time=0.01 --interactive --fps=10 --jobs=1
-# python3.10 run.py policy=3wrobot_kin_nomial initial_conditions=3wrobot_kin system=3wrobot_kin common.sampling_time=0.01 --interactive --fps=10 --jobs=1
-# python run.py policy=3wrobot_kin_nomial initial_conditions=3wrobot_kin system=3wrobot_kin common.sampling_time=0.01 --interactive --fps=10 --jobs=1 --configure
-
-
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
         python3.10 run.py \
@@ -20,7 +15,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.critic_desired_decay=1e-6 \
                   policy.critic_low_kappa_coeff=1e-1 \
                   policy.critic_up_kappa_coeff=1e3 \
-                  policy.penalty_factor=1e2 \
+                  policy.penalty_factor=1e3 \
                   policy.step_size_multiplier=5 \
                   policy.nominal_only=False
     else
