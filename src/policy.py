@@ -611,7 +611,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         penalty_factor: float=1e1,
         step_size_multiplier: int=1,
         nominal_only: bool=False,
-        nominal_kappa_params: list[float] = [2, 15, -1.50],
+        nominal_kappa_params: None|list[float] = [2, 15, -1.50],
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
@@ -655,8 +655,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
         self.critic_weight_change_penalty_coeff = 1.0
 
-        self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds,
-                                                    kappa_params=nominal_kappa_params)
+        if nominal_kappa_params is not None:
+            self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds,
+                                                        kappa_params=nominal_kappa_params)
 
         self.action_min = np.array( action_bounds[:,0] )
         self.action_max = np.array( action_bounds[:,1] )
@@ -1267,7 +1268,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             return np.expand_dims(action, axis=0)
 
 
-    def calf_filter(self, critic_weight_tensor, observation, action):
+    def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0.2):
         """
         If CALF constraints are satisfied, put the specified action through and update the CALF's state
         (safe weights, observation and action).
@@ -1304,7 +1305,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         if not self.nominal_only and (
             (condition_1
              and condition_2
-             and norm(observation[0, :2]) > 0.2)
+             and norm(observation[0, :2]) > goal_radius_disable_calf)
             or sample <= self.relax_probability
         ):
             # print("\033[93m") # Color it to indicate CALF
@@ -1487,3 +1488,19 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.score = 0
         self.critic_buffer_safe.clear()
         ############################################################
+
+
+class ThreeWheeledRobotSARSA_M(ThreeWheeledRobotCALFQ):
+    def get_action(self, observation: np.ndarray) -> np.ndarray:
+        action = super().get_action(observation)
+        self.current_action = action
+        return action
+    
+    def get_safe_action(self, observation: np.ndarray) -> np.ndarray:
+        if not hasattr(self, "current_action"):
+            return np.zeros((1, self.dim_action))
+        else:
+            return self.current_action
+
+    def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):
+        return super().calf_filter(critic_weight_tensor, observation, action, goal_radius_disable_calf)
