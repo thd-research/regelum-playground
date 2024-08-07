@@ -603,7 +603,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self,
         # action_bounds: list[list[float]],
         system: Union[System],
-        # R1_diag: list = [],
+        R1_diag: list=[1, 1, 1e-1, 0, 0],
         weight_path: str=None,
         critic_desired_decay: float=1e-5, 
         critic_low_kappa_coeff: float=1e-1,
@@ -615,7 +615,7 @@ class ThreeWheeledRobotCALFQ(Policy):
     ):
         super().__init__()
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
-        R1_diag = [1, 1, 1e-1, 0, 0]
+        # R1_diag = [1, 1, 1e-1, 0, 0]
 
         self.nominal_only = nominal_only
 
