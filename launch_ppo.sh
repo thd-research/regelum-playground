@@ -2,6 +2,8 @@ run_experiment_with_seed() {
     local seed="$1"
     python3.10 run.py \
     +seed=$seed \
+    --single-thread \
+    --parallel \
     simulator=casadi \
     scenario=ppo_scenario \
     system=3wrobot_kin_customized \

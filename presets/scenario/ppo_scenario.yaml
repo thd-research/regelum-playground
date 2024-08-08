@@ -46,6 +46,7 @@ policy_opt_method_kwargs:
 
 policy_model:
   dim_input: 3
+  output_bounds: = np.array([[-0.5, 0.5], [-2.84, 2.84]])
 
 critic_model:
   dim_input: 3
