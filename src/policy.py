@@ -780,7 +780,8 @@ class ThreeWheeledRobotCALFQ(Policy):
             [to_row_vec(observation), to_row_vec(action)]
         )
 
-        penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=self.penalty_factor)
+        # penalty = self.obstacle_penalty(to_row_vec(observation), penalty_factor=self.penalty_factor)
+        penalty = 0
         result = observation_action @ self.run_obj_param_tensor @ observation_action.T + penalty
 
         return to_scalar(result)
@@ -1395,7 +1396,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         # DEBUG
         # action = self.get_safe_action(observation)
         # /DEBUG
-        dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
+        # dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
+        dist_to_spot = 1
 
         if dist_to_spot <= 0.1:
             # Slow the robot down if robot is near the obstacle
