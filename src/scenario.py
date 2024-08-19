@@ -1,9 +1,13 @@
 import numpy as np
+import torch
 
-from typing import Optional
+from regelum.data_buffers import DataBuffer
+from typing import Optional, Dict, Any, Callable, Type
+
+from src.ppo_policy import MyPolicyPPO
 
 from regelum import RegelumBase
-from regelum.policy import Policy, RLPolicy
+from regelum.policy import Policy, RLPolicy, PolicyPPO
 from regelum.system import System
 from regelum.constraint_parser import ConstraintParser, ConstraintParserTrivial
 from regelum.objective import RunningObjective
@@ -13,9 +17,13 @@ from regelum.simulator import Simulator
 from regelum.event import Event
 from regelum.predictor import Predictor, EulerPredictor
 from regelum.critic import CriticTrivial
-from regelum.model import ModelWeightContainer
+from regelum.model import (
+    PerceptronWithTruncatedNormalNoise,
+    ModelPerceptron,
+    ModelWeightContainer
+)
 from regelum.optimizable.core.configs import CasadiOptimizerConfig
-from regelum.scenario import RLScenario, Scenario
+from regelum.scenario import RLScenario, Scenario, PPO, get_policy_gradient_kwargs
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -361,7 +369,7 @@ class ROSScenario(RegelumBase):
         self.value = 0.0
         self.is_first_compute_action_call = True
 
-class RosMPC(RLScenario):
+class RosMPC(RLScenario, ROSMiddleScenario):
     """Leverages the Model Predictive Control Scenario.
 
     The MPCScenario leverages the Model Predictive Control (MPC) approach within the reinforcement learning scenario,
@@ -428,7 +436,7 @@ class RosMPC(RLScenario):
                     predictor
                     if predictor is not None
                     else EulerPredictor(system=system, 
-                                        pred_step_size=prediction_step_size)
+                                        pred_step_size=prediction_step_size*sampling_time)
                 ),
                 discount_factor=discount_factor,
                 optimizer_config=CasadiOptimizerConfig(),
@@ -477,4 +485,84 @@ class MyScenario(ROSMiddleScenario):
         }
     
 
+class MyPPO(RLScenario):
+    def __init__(
+        self,
+        policy_model: PerceptronWithTruncatedNormalNoise,
+        critic_model: ModelPerceptron,
+        sampling_time: float,
+        running_objective: RunningObjective,
+        simulator: Simulator,
+        critic_n_epochs: int,
+        policy_n_epochs: int,
+        critic_opt_method_kwargs: Dict[str, Any],
+        policy_opt_method_kwargs: Dict[str, Any],
+        critic_opt_method: Type[torch.optim.Optimizer] = torch.optim.Adam,
+        policy_opt_method: Type[torch.optim.Optimizer] = torch.optim.Adam,
+        running_objective_type: str = "cost",
+        critic_td_n: int = 1,
+        cliprange: float = 0.2,
+        discount_factor: float = 0.7,
+        observer: Optional[Observer] = None,
+        N_episodes: int = 2,
+        N_iterations: int = 100,
+        value_threshold: float = np.inf,
+        stopping_criterion: Optional[Callable[[DataBuffer], bool]] = None,
+        gae_lambda: float = 0.0,
+        is_normalize_advantages: bool = True,
+        device: str = "cpu",
+        entropy_coeff: float = 0.0,
+        policy_checkpoint_path: str = "",
+        critic_checkpoint_path: str = "",
+    ):
+        if len(policy_checkpoint_path) != 0:
+            policy_model.load_state_dict(torch.load(policy_checkpoint_path))
 
+        if len(critic_checkpoint_path) != 0:
+            critic_model.load_state_dict(torch.load(critic_checkpoint_path))
+        assert (
+            running_objective_type == "cost" or running_objective_type == "reward"
+        ), f"Invalid 'running_objective_type' value: '{running_objective_type}'. It must be either 'cost' or 'reward'."
+        super().__init__(
+            **get_policy_gradient_kwargs(
+                sampling_time=sampling_time,
+                running_objective=running_objective,
+                simulator=simulator,
+                discount_factor=discount_factor,
+                observer=observer,
+                N_episodes=N_episodes,
+                N_iterations=N_iterations,
+                value_threshold=value_threshold,
+                policy_type=MyPolicyPPO,
+                policy_model=policy_model,
+                policy_opt_method=policy_opt_method,
+                policy_opt_method_kwargs=policy_opt_method_kwargs,
+                is_reinstantiate_policy_optimizer=True,
+                policy_kwargs=dict(
+                    cliprange=cliprange,
+                    running_objective_type=running_objective_type,
+                    sampling_time=sampling_time,
+                    gae_lambda=gae_lambda,
+                    is_normalize_advantages=is_normalize_advantages,
+                    entropy_coeff=entropy_coeff,
+                ),
+                policy_n_epochs=policy_n_epochs,
+                critic_model=critic_model,
+                critic_opt_method=critic_opt_method,
+                critic_opt_method_kwargs=critic_opt_method_kwargs,
+                critic_td_n=critic_td_n,
+                critic_n_epochs=critic_n_epochs,
+                critic_is_value_function=True,
+                is_reinstantiate_critic_optimizer=True,
+                stopping_criterion=stopping_criterion,
+                device=device,
+            )
+        )
+
+    # def run_episode(self, episode_counter, iteration_counter):
+    #     self.episode_counter = episode_counter
+    #     self.iteration_counter = iteration_counter
+    #     while self.sim_status != "episode_ended":
+    #         self.sim_status = self.step()
+
+    #     return self.data_buffer

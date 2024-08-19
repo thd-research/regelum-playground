@@ -43,7 +43,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   scenario=my_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
-                  simulator.time_final=40 scenario.N_iterations=40 \
+                  simulator.time_final=40 scenario.N_iterations=1 \
                   --jobs=-1 \
                   --experiment=calf_inc_penalty \
                   policy.critic_desired_decay=1e-6 \

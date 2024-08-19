@@ -7,7 +7,8 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario=mpc_scenario_customized \
                     scenario.prediction_horizon=20 \
                     scenario.prediction_step_size=10 \
-                    common.sampling_time=.1
+                    common.sampling_time=.1 \
+                    --interactive
  
     else
         python3.10 run.py \
