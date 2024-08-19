@@ -485,7 +485,7 @@ class MyScenario(ROSMiddleScenario):
         }
     
 
-class MyPPO(RLScenario):
+class MyPPO(RLScenario, ROSMiddleScenario):
     def __init__(
         self,
         policy_model: PerceptronWithTruncatedNormalNoise,

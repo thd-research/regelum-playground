@@ -11,7 +11,7 @@ callbacks:
   - regelum.callback.HistoricalDataCallback
   - regelum.callback.ValueCallback
   - src.callback.PolicyNumpyModelSaver
-  - src.callback.CALFHistoricalDataCallback
+  # - src.callback.CALFHistoricalDataCallback
   - src.callback.HandlerChecker
   - src.callback.PolicyModelSaver
   - src.callback.CriticModelSaver

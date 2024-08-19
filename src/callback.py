@@ -63,7 +63,11 @@ class MyObjectiveTracker(ObjectiveTracker):
 
 class CALFHistoricalDataCallback(HistoricalDataCallback):
     def is_target_event(self, obj, method, output, triggers):
-        return isinstance(obj, MyScenario) and method == "post_compute_action"
+        if isinstance(obj, MyScenario) and method == "post_compute_action":
+            print("Enter CALFHistoricalDataCallback")   
+            return True
+        
+        return False
     
     def on_function_call(self, obj, method: str, output: Dict[str, Any]):
         if self.observation_components_naming is None:
