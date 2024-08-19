@@ -369,7 +369,7 @@ class ROSScenario(RegelumBase):
         self.value = 0.0
         self.is_first_compute_action_call = True
 
-class RosMPC(RLScenario):
+class RosMPC(RLScenario, ROSMiddleScenario):
     """Leverages the Model Predictive Control Scenario.
 
     The MPCScenario leverages the Model Predictive Control (MPC) approach within the reinforcement learning scenario,
@@ -436,7 +436,7 @@ class RosMPC(RLScenario):
                     predictor
                     if predictor is not None
                     else EulerPredictor(system=system, 
-                                        pred_step_size=prediction_step_size)
+                                        pred_step_size=prediction_step_size*sampling_time)
                 ),
                 discount_factor=discount_factor,
                 optimizer_config=CasadiOptimizerConfig(),
