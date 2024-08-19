@@ -4,8 +4,10 @@ import torch
 from regelum.data_buffers import DataBuffer
 from typing import Optional, Dict, Any, Callable, Type
 
+from src.ppo_policy import MyPolicyPPO
+
 from regelum import RegelumBase
-from regelum.policy import Policy, RLPolicy
+from regelum.policy import Policy, RLPolicy, PolicyPPO
 from regelum.system import System
 from regelum.constraint_parser import ConstraintParser, ConstraintParserTrivial
 from regelum.objective import RunningObjective
@@ -21,7 +23,7 @@ from regelum.model import (
     ModelWeightContainer
 )
 from regelum.optimizable.core.configs import CasadiOptimizerConfig
-from regelum.scenario import RLScenario, Scenario, PPO
+from regelum.scenario import RLScenario, Scenario, PPO, get_policy_gradient_kwargs
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -483,7 +485,7 @@ class MyScenario(ROSMiddleScenario):
         }
     
 
-class MyPPO(PPO):
+class MyPPO(RLScenario):
     def __init__(
         self,
         policy_model: PerceptronWithTruncatedNormalNoise,
@@ -518,31 +520,44 @@ class MyPPO(PPO):
 
         if len(critic_checkpoint_path) != 0:
             critic_model.load_state_dict(torch.load(critic_checkpoint_path))
-        
-        super().__init__(policy_model, 
-                         critic_model, 
-                         sampling_time, 
-                         running_objective, 
-                         simulator, 
-                         critic_n_epochs, 
-                         policy_n_epochs, 
-                         critic_opt_method_kwargs, 
-                         policy_opt_method_kwargs, 
-                         critic_opt_method, 
-                         policy_opt_method, 
-                         running_objective_type, 
-                         critic_td_n, 
-                         cliprange, 
-                         discount_factor, 
-                         observer, 
-                         N_episodes, 
-                         N_iterations, 
-                         value_threshold, 
-                         stopping_criterion, 
-                         gae_lambda, 
-                         is_normalize_advantages, 
-                         device, 
-                         entropy_coeff)
+        assert (
+            running_objective_type == "cost" or running_objective_type == "reward"
+        ), f"Invalid 'running_objective_type' value: '{running_objective_type}'. It must be either 'cost' or 'reward'."
+        super().__init__(
+            **get_policy_gradient_kwargs(
+                sampling_time=sampling_time,
+                running_objective=running_objective,
+                simulator=simulator,
+                discount_factor=discount_factor,
+                observer=observer,
+                N_episodes=N_episodes,
+                N_iterations=N_iterations,
+                value_threshold=value_threshold,
+                policy_type=MyPolicyPPO,
+                policy_model=policy_model,
+                policy_opt_method=policy_opt_method,
+                policy_opt_method_kwargs=policy_opt_method_kwargs,
+                is_reinstantiate_policy_optimizer=True,
+                policy_kwargs=dict(
+                    cliprange=cliprange,
+                    running_objective_type=running_objective_type,
+                    sampling_time=sampling_time,
+                    gae_lambda=gae_lambda,
+                    is_normalize_advantages=is_normalize_advantages,
+                    entropy_coeff=entropy_coeff,
+                ),
+                policy_n_epochs=policy_n_epochs,
+                critic_model=critic_model,
+                critic_opt_method=critic_opt_method,
+                critic_opt_method_kwargs=critic_opt_method_kwargs,
+                critic_td_n=critic_td_n,
+                critic_n_epochs=critic_n_epochs,
+                critic_is_value_function=True,
+                is_reinstantiate_critic_optimizer=True,
+                stopping_criterion=stopping_criterion,
+                device=device,
+            )
+        )
 
     # def run_episode(self, episode_counter, iteration_counter):
     #     self.episode_counter = episode_counter
