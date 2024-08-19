@@ -9,7 +9,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.prediction_horizon=5 \
                     scenario.prediction_step_size=10 \
                     common.sampling_time=.1 \
-                    simulator.time_final=100 \
+                    simulator.time_final=20 \
                     --interactive
     else
         python3.10 run.py \

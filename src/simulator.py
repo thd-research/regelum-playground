@@ -164,7 +164,7 @@ class RosTurtlebot(CasADi):
             if self.stop_if_reach_target and \
                 np.allclose(self.new_state[0][:2], 
                             np.zeros_like(self.new_state[0][:2]), 
-                            atol=0.1):
+                            atol=0.05):
                 action = np.zeros_like(action)
 
             self.system.receive_action(action)
