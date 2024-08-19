@@ -8,8 +8,11 @@ defaults:
 
 callbacks:
   - regelum.callback.ScenarioStepLogger
-  - regelum.callback.HistoricalDataCallback
+  # - regelum.callback.HistoricalDataCallback
   - regelum.callback.ValueCallback
+  - src.callback.PolicyNumpyModelSaver
+  - src.callback.CALFHistoricalDataCallback
+  - src.callback.HandlerChecker
 
 rehydra:
   sweep:

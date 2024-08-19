@@ -15,7 +15,7 @@ from regelum.predictor import Predictor, EulerPredictor
 from regelum.critic import CriticTrivial
 from regelum.model import ModelWeightContainer
 from regelum.optimizable.core.configs import CasadiOptimizerConfig
-from regelum.scenario import RLScenario
+from regelum.scenario import RLScenario, Scenario
 
 import rospy
 from nav_msgs.msg import Odometry
@@ -27,6 +27,14 @@ import math
 
 import traceback 
 
+
+class ROSMiddleScenario(Scenario):
+    # this function need used with ROS simulator
+    def compute_action_sampled(self, time, estimated_state, observation):
+        tmp = super().compute_action_sampled(time, estimated_state, observation)
+        self.simulator.is_time_for_new_sample = self.is_time_for_new_sample
+        return tmp
+        
 
 class ROSScenario(RegelumBase):
     def __init__(
@@ -426,3 +434,47 @@ class RosMPC(RLScenario):
                 optimizer_config=CasadiOptimizerConfig(),
             ),
         )
+
+class MyScenario(ROSMiddleScenario):
+    def run_episode(self, episode_counter, iteration_counter):
+        self.episode_counter = episode_counter
+        self.iteration_counter = iteration_counter
+        while self.sim_status != "episode_ended":
+            self.sim_status = self.step()
+            
+            if np.linalg.norm(self.observation[0,:2]) < 0.01:
+                break
+    
+    def calculate_value(self, running_objective: float, time: float):
+        if hasattr(self.policy, "score"):
+            return self.policy.score
+        else:
+            return 0
+    
+    @apply_callbacks()
+    def reset_iteration(self):
+        self.policy.reset()
+        return super().reset_iteration()
+    
+    @apply_callbacks()
+    def post_compute_action(self, observation, estimated_state):
+        return {
+            "estimated_state": estimated_state,
+            "observation": observation,
+            "time": self.time,
+            "episode_id": self.episode_counter,
+            "iteration_id": self.iteration_counter,
+            "step_id": self.step_counter,
+            "action": self.get_action_from_policy(),
+            "running_objective": self.policy.score,
+            "current_value": self.policy.current_score,
+            "use_calf": self.policy.log_params["use_calf"],
+            "critic_new": self.policy.log_params["critic_new"],
+            "critic_safe": self.policy.log_params["critic_safe"],
+            "critic_low_kappa": self.policy.log_params["critic_low_kappa"],
+            "critic_up_kappa": self.policy.log_params["critic_up_kappa"],
+            "calf_diff": self.policy.log_params["calf_diff"]
+        }
+    
+
+

@@ -8,10 +8,13 @@ from regelum.animation import DefaultAnimation
 from .animation import (
     ThreeWheeledRobotAnimationWithNewLims,
     ThreeWheeledRobotAnimationWithSpotNewLims,
+    MyObjectiveAnimation
 )
 from regelum.callback import detach
 from regelum.system import System   
-
+from regelum.animation import (
+    ObjectiveAnimation
+)
 
 # In the following two classes we want to alter their respective animation callbacks, so we:
 # - detach the default animations

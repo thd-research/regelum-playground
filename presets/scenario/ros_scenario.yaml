@@ -1,4 +1,4 @@
-_target_: regelum.scenario.Scenario
+_target_: src.scenario.ROSMiddleScenario
 
 
 policy: ~ policy

@@ -11,6 +11,9 @@ import threading
 import math
 import numpy as np
 import time
+import subprocess
+from pathlib import Path
+import logging
 
 
 class RosTurtlebot(CasADi):
@@ -23,28 +26,34 @@ class RosTurtlebot(CasADi):
                  first_step: float | None = 0.000001, 
                  atol: float | None = 0.00001, 
                  rtol: float | None = 0.001,
-                 ros_ctrl_rate: int = 100
+                 stop_if_reach_target: bool = False,
+                 use_phy_robot: bool=False
                  ):
         self.state_goal = state_goal
         self.rotation_counter = 0
         self.prev_theta = 0
         self.new_state = state_init
+        self.state_init = None
+        self.eps = 0.005
+        self.stop_if_reach_target = stop_if_reach_target
+        self.use_phy_robot = use_phy_robot
     
         # Topics
-        rospy.init_node('ros_preset_node')
+        rospy.init_node('ros_preset_node', log_level=rospy.INFO)
         self.pub_cmd_vel = rospy.Publisher("/cmd_vel", Twist, queue_size=1, latch=False)
         self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
 
         # ROS 
-        self.RATE = rospy.get_param('/rate', ros_ctrl_rate)
+        self.RATE = rospy.get_param('/rate', int(1/max_step))
         self.lock = threading.Lock()
 
         while not hasattr(self, "new_state"):
             time.sleep(.1)
 
         super().__init__(system, self.new_state, action_init, time_final, max_step, first_step, atol, rtol)
+        # print("[sim] system bounds:", system.action_bounds)
         self._action = np.expand_dims(self.initialize_init_action(), axis=0)
-
+        self.loginfo = logging.getLogger("regelum").info
         self.reset()
 
     def get_velocity(self, msg):
@@ -94,6 +103,8 @@ class RosTurtlebot(CasADi):
             
             else:
                 self.rotation_counter += 1
+
+        self.rotation_counter = 0
         
         self.prev_theta = theta
         theta = theta + 2 * np.pi * self.rotation_counter
@@ -109,6 +120,9 @@ class RosTurtlebot(CasADi):
         if isinstance(self.system, ThreeWheeledRobotDynamic):
             self.new_state += [self._action[0, 0], self._action[0, 1]] # if hasattr(self, "_action") else [0, 0]
 
+        if self.state_init is None:
+            self.state_init = self.new_state
+
         self.new_state = np.expand_dims(self.new_state, axis=0)
         self.lock.release()
 
@@ -117,7 +131,8 @@ class RosTurtlebot(CasADi):
         if self.system.system_type == "diff_eqn":
             self.ODE_solver = self.initialize_ode_solver()
             self.time = 0.0
-            self.state = self.new_state
+            self.state = self.state_init
+            self.new_state = self.state_init
             self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.action_init
             )
@@ -126,20 +141,51 @@ class RosTurtlebot(CasADi):
             self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.system.inputs
             )
-        
+
+        self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.rate = rospy.Rate(self.RATE)
         self.episode_start = None
 
+        if not self.use_phy_robot:
+            subprocess.check_output(["python3.10", f"{Path(__file__).parent.resolve()}/reset_ros.py"])
+
+        self.receive_action(np.zeros_like(self._action))
+
+        if hasattr(self, "_time_measurement"):
+            delattr(self, "_time_measurement")
+
     # Publish action to gazebo
     def receive_action(self, action):
-        self.system.receive_action(action)
-        self._action = action
-        velocity = Twist()
+        if not hasattr(self, "is_time_for_new_sample") or not self.is_time_for_new_sample:
+            return
+        
+        try:
+            # Check to stop at the target
+            if self.stop_if_reach_target and \
+                np.allclose(self.new_state[0][:2], 
+                            np.zeros_like(self.new_state[0][:2]), 
+                            atol=0.1):
+                action = np.zeros_like(action)
 
-        # Generate ROSmsg from action
-        velocity.linear.x = action[0, 0]
-        velocity.angular.z = action[0, 1]
-        self.pub_cmd_vel.publish(velocity)
+            self.system.receive_action(action)
+            self._action = action
+            velocity = Twist()
+
+            # Generate ROSmsg from action
+            velocity.linear.x = action[0, 0]
+            velocity.angular.z = action[0, 1]
+            self.pub_cmd_vel.publish(velocity)
+        except Exception as err:
+            print(err)
+
+    def update_time(self):
+        current_time = rospy.get_time()
+
+        if self.episode_start is None:
+            self.episode_start = current_time
+        
+        self.time = current_time - self.episode_start
+        time.sleep(0.005)
 
     # Stop condition
     # update time, new_state
@@ -148,30 +194,36 @@ class RosTurtlebot(CasADi):
         Return: -1: episode ended
                 otherwise: episode continues
         '''
-        stop_signal = False
-
-        stop_signal |= rospy.is_shutdown()
-
-        # if self.time >= self.time_final:
-        #     stop_signal |= True
-        #     self.receive_action(np.zeros_like(self.action_init))
-        # 
-
+        # sleep_duration_s = self.max_step
+        # conv_ns_to_s = lambda x: x / 10**9
         # if hasattr(self, "_time_measurement"):
-        #     print("It takes:", (time.perf_counter_ns() - self._time_measurement)/1000000)
+        #     last_computation_duration = conv_ns_to_s(time.perf_counter_ns() - self._time_measurement)
+        #     sleep_duration_s = (sleep_duration_s - last_computation_duration)
+        
+        self.update_time()
+
+        if self.time >= self.time_final:
+            return -1
+        
+        if rospy.is_shutdown():
+            raise RuntimeError("Ros shutdowns")
+
+        # if sleep_duration_s < 0:
+        #     self.loginfo(f"computation takes {last_computation_duration}s \n Please increase your sampling time or upgrade computational unit.")
+        # else:
+        #     time.sleep(sleep_duration_s)
 
         # self._time_measurement = time.perf_counter_ns()
 
-        self.rate.sleep()
-
-        if stop_signal:
-            return -1
-
-        if self.episode_start is None:
-            self.episode_start = rospy.get_time()
-        self.time = rospy.get_time() - self.episode_start
         self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.system.inputs
             )
         self.state = self.new_state
         pass
+
+
+class MySimulator(CasADi):
+    def reset(self):
+        super().reset()
+
+        
