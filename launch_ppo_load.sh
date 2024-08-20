@@ -1,9 +1,3 @@
-ROOT="regelum_data/outputs"
-POLICY_MODEL_PATH=${ROOT} + "/2024-08-19/15-23-09/0/.callbacks/PolicyModelSaver/model_it_00238.npy"
-CRITIC_MODEL_PATH=${ROOT} + "/2024-08-19/15-23-09/0/.callbacks/CriticModelSaver/model_it_00238.npy"
-
-echo ${POLICY_MODEL_PATH}
-echo ${CRITIC_MODEL_PATH}
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
         python3.10 run.py \
