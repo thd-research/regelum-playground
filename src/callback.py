@@ -5,7 +5,7 @@ from regelum.callback import (
     HistoricalCallback)
 from regelum.policy import Policy
 from regelum.scenario import PPO, REINFORCE
-from src.scenario import RosMPC
+from src.scenario import RosMPC, MyPPO
 
 from typing import Dict, Any
 import numpy as np
@@ -158,7 +158,7 @@ class PolicyModelSaver(HistoricalCallback):
 
     def is_target_event(self, obj, method, output, triggers):
         if (
-            (isinstance(obj, REINFORCE) or isinstance(obj, PPO))
+            (isinstance(obj, REINFORCE) or isinstance(obj, PPO) or isinstance(obj, MyPPO))
             and method == "pre_optimize"
         ):
             which, event, time, episode_counter, iteration_counter = output
@@ -194,7 +194,7 @@ class CriticModelSaver(HistoricalCallback):
 
     def is_target_event(self, obj, method, output, triggers):
         if (
-            (isinstance(obj, PPO))
+            (isinstance(obj, PPO) or isinstance(obj, MyPPO))
             and method == "pre_optimize"
         ):
             which, event, time, episode_counter, iteration_counter = output
