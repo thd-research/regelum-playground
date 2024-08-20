@@ -516,10 +516,13 @@ class MyPPO(RLScenario, ROSMiddleScenario):
         critic_checkpoint_path: str = "",
     ):
         if len(policy_checkpoint_path) != 0:
+            print("load", policy_checkpoint_path)
             policy_model.load_state_dict(torch.load(policy_checkpoint_path))
 
         if len(critic_checkpoint_path) != 0:
+            print("load", critic_checkpoint_path)
             critic_model.load_state_dict(torch.load(critic_checkpoint_path))
+
         assert (
             running_objective_type == "cost" or running_objective_type == "reward"
         ), f"Invalid 'running_objective_type' value: '{running_objective_type}'. It must be either 'cost' or 'reward'."
