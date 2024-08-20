@@ -7,7 +7,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     system=3wrobot_kin_customized \
                     --experiment=ppo_3wrobot_kin \
                     scenario.N_episodes=1 \
-                    scenario.N_iterations=280 \
+                    scenario.N_iterations=1 \
                     scenario.policy_n_epochs=50 \
                     scenario.critic_n_epochs=50 \
                     scenario.policy_opt_method_kwargs.lr=0.005 \
@@ -25,6 +25,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     common.sampling_time=0.1 \
                     scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/PolicyModelSaver/model_it_00238" \
                     scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/CriticModelSaver/model_it_00238" \
+                    simulator.use_phy_robot=false \
                     --interactive
     else
         python3.10 run.py \

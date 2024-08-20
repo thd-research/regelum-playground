@@ -21,7 +21,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.penalty_factor=1e3 \
                   policy.step_size_multiplier=5 \
                   policy.weight_path=${CALF_MODEL_PATH} \
-                  simulator.use_phy_robot=True \
+                  simulator.use_phy_robot=false \
                   --interactive
     else
         python3.10 run.py +seed=7 \
