@@ -17,7 +17,7 @@ os.makedirs(ROOT_DIR, exist_ok=True)
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
-config = rs.config()https://dev.intelrealsense.com/docs/python2?_ga=2.115289287.1346185483.1724073850-1129405603.1724073850
+config = rs.config()
 
 
 # Get device product line for setting a supporting resolution
@@ -40,8 +40,14 @@ video_name = datetime.now().strftime("%Y%m%d_%H%M%S_ver_1")
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 # config.enable_record_to_file(os.path.join(ROOT_DIR, video_name + ".bag"))
 
+profile = {
+    "high": (1080, 920),
+    "medium": (640, 480)
+
+}
+
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-out = cv2.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, (640,480))
+out = cv2.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, profile['high'])
 
 # Start streaming
 pipeline.start(config)
@@ -52,7 +58,7 @@ try:
         # Wait for a coherent pair of frames: depth and color
         frames = pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
-https://dev.intelrealsense.com/docs/python2?_ga=2.115289287.1346185483.1724073850-1129405603.1724073850
+
         if not color_frame:
             continue
         
