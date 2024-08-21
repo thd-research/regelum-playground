@@ -22,13 +22,8 @@ class ThreeWheeledRobotCostWithSpot(objective.RunningObjective):
         self.spot_y_center = spot_y_center
         self.spot_std = spot_std
 
-    def __call__(
-        self,
-        observation,
-        action,
-        is_save_batch_format: bool = False,
-    ):
-        spot_cost = (
+    def cal_spot_penalty(self, observation):
+        return (
             self.spot_gain
             * rg.exp(
                 -(
@@ -39,6 +34,14 @@ class ThreeWheeledRobotCostWithSpot(objective.RunningObjective):
             )
             / (2 * np.pi * self.spot_std**2)
         )
+
+    def __call__(
+        self,
+        observation,
+        action,
+        is_save_batch_format: bool = False,
+    ):
+        spot_cost = self.cal_spot_penalty(observation)
 
         quadratic_cost = self.quadratic_model(observation, action)
         cost = quadratic_cost + spot_cost
