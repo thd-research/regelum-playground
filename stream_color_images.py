@@ -37,17 +37,17 @@ if not found_rgb:
 
 video_name = datetime.now().strftime("%Y%m%d_%H%M%S_ver_1")
 
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-# config.enable_record_to_file(os.path.join(ROOT_DIR, video_name + ".bag"))
-
 profile = {
     "high": (1080, 920),
     "medium": (640, 480)
 
 }
 
+config.enable_stream(rs.stream.color, *profile['medium'], rs.format.bgr8, 30)
+# config.enable_record_to_file(os.path.join(ROOT_DIR, video_name + ".bag"))
+
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-out = cv2.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, profile['high'])
+out = cv2.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, profile['medium'])
 
 # Start streaming
 pipeline.start(config)
@@ -56,7 +56,7 @@ try:
     while True:
 
         # Wait for a coherent pair of frames: depth and color
-        frames = pipeline.wait_for_frames()
+        frames = pipeline.wait_for_frames(15000)
         color_frame = frames.get_color_frame()
 
         if not color_frame:
