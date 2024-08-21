@@ -10,6 +10,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.prediction_step_size=10 \
                     common.sampling_time=.1 \
                     simulator.time_final=20 \
+                    simulator.use_phy_robot=True \
                     --interactive
     else
         python3.10 run.py \

@@ -25,7 +25,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     common.sampling_time=0.1 \
                     scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/PolicyModelSaver/model_it_00238" \
                     scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/CriticModelSaver/model_it_00238" \
-                    simulator.use_phy_robot=false \
+                    simulator.use_phy_robot=true \
                     --interactive
     else
         python3.10 run.py \
