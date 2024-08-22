@@ -1,6 +1,6 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
-    for seed in {4..20}; do
+    for seed in {11..20}; do
         python3.10 run.py \
                     +seed=$seed \
                     simulator=ros \
@@ -11,7 +11,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.N_iterations=100 \
                     scenario.policy_n_epochs=50 \
                     scenario.critic_n_epochs=50 \
-                    scenario.policy_opt_method_kwargs.lr=0.005 \
+                    scenario.policy_opt_method_kwargs.lr=0.0005 \
                     scenario.policy_model.n_hidden_layers=2 \
                     scenario.policy_model.dim_hidden=15 \
                     scenario.policy_model.std=0.1 \
