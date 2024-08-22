@@ -1,13 +1,14 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
+    for seed in {4..20}; do
         python3.10 run.py \
-                    +seed=7 \
+                    +seed=$seed \
                     simulator=ros \
                     scenario=ppo_scenario \
                     system=3wrobot_kin_customized \
                     --experiment=ppo_3wrobot_kin \
                     scenario.N_episodes=1 \
-                    scenario.N_iterations=280 \
+                    scenario.N_iterations=100 \
                     scenario.policy_n_epochs=50 \
                     scenario.critic_n_epochs=50 \
                     scenario.policy_opt_method_kwargs.lr=0.005 \
@@ -24,6 +25,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     simulator.time_final=50 \
                     common.sampling_time=0.1 \
                     --interactive
+        done
     else
         python3.10 run.py \
                     +seed=7 \
