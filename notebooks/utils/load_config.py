@@ -28,5 +28,5 @@ def get_df_historical_data(exp_path=None, chosen_name=None, absolute_path=None):
 
     return pd.read_hdf(file_path, key="data") 
 
-def get_list_distorical_data(exp_path):
+def get_list_historical_data(exp_path):
     return glob(exp_path + "/*/.callbacks/HistoricalDataCallback/*.h5")
