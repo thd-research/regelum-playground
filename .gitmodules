@@ -1,0 +1,4 @@
+[submodule "qcar_ws"]
+	path = qcar_ws
+	url = git@github.com:thd-research/qcar_ws.git
+	branch = ruben_contreras

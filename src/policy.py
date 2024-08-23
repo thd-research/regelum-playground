@@ -437,7 +437,7 @@ class ThreeWheeledRobotDynamicMinGradCLF(ThreeWheeledRobotKinematicMinGradCLF):
         return action
 
 
-class ThreeWheeledRobotNomial(Policy):
+class ThreeWheeledRobotNominal(Policy):
     def __init__(
         self,
         action_bounds: list[list[float]],
@@ -656,7 +656,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_weight_change_penalty_coeff = 1.0
 
         if nominal_kappa_params is not None:
-            self.nominal_ctrl = ThreeWheeledRobotNomial(action_bounds=action_bounds,
+            self.nominal_ctrl = ThreeWheeledRobotNominal(action_bounds=action_bounds,
                                                         kappa_params=nominal_kappa_params)
 
         self.action_min = np.array( action_bounds[:,0] )
@@ -1489,7 +1489,6 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_buffer_safe.clear()
         ############################################################
 
-
 class ThreeWheeledRobotSARSA_M(ThreeWheeledRobotCALFQ):
     def get_action(self, observation: np.ndarray) -> np.ndarray:
         action = super().get_action(observation)
@@ -1504,3 +1503,153 @@ class ThreeWheeledRobotSARSA_M(ThreeWheeledRobotCALFQ):
 
     def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):
         return super().calf_filter(critic_weight_tensor, observation, action, goal_radius_disable_calf)
+
+
+class QCarRobotNomial(Policy):
+    def __init__(
+        self,
+        action_bounds: list[list[float]],
+        ctrl_gain=10,
+        **kwargs
+    ):
+        super().__init__()
+        self.action_bounds = action_bounds
+        self.ctrl_gain = ctrl_gain
+
+    def _zeta(self, xNI):
+        """
+        Analytic disassembled subgradient, without finding minimizer theta.
+
+        """
+        
+        #                                 3
+        #                             |x |
+        #         4     4             | 3|          
+        # L(x) = x  +  x  +  ----------------------------------=   min F(x)
+        #         1     2                                        theta   
+        #                     /     / 2   2 \             \ 2
+        #                     | sqrt| x + x   | + sqrt|x | |
+        #                     \     \ 1   2 /        | 3| /  
+        #                        \_________  __________/
+        #                                 \/
+        #                               sigma
+        #                                                3
+        #                                            |x |
+        #                4     4                     | 3|          
+        # F(x; theta) = x  +  x  +  ----------------------------------------
+        #                1     2    
+        #                           /                                      \ 2
+        #                           | x cos theta + x sin theta + sqrt|x | |
+        #                           \ 1             2                | 3|  /
+        #                              \_______________  ______________/
+        #                                              \/
+        #                                             sigma~ 
+    
+    
+        sigma = np.sqrt( xNI[0]**2 + xNI[1]**2 ) + np.sqrt(abs(xNI[2]));
+        
+        nablaL = np.zeros(3)
+        
+        nablaL[0] = 4*xNI[0]**3 + np.abs(xNI[2])**3/sigma**3 * 1/np.sqrt( xNI[0]**2 + xNI[1]**2 )**3 * 2 * xNI[0]
+        nablaL[1] = 4*xNI[1]**3 + np.abs(xNI[2])**3/sigma**3 * 1/np.sqrt( xNI[0]**2 + xNI[1]**2 )**3 * 2 * xNI[1]
+        nablaL[2] = 3 * np.abs(xNI[2])**2 * np.sign(xNI[2]) + np.abs(xNI[2])**3 / sigma**3 * 1/np.sqrt(np.abs(xNI[2])) * np.sign(xNI[2])
+    
+        theta = 0
+        
+        sigma_tilde = xNI[0]*np.cos(theta) + xNI[1]*np.sin(theta) + np.sqrt(np.abs(xNI[2]))
+        
+        nablaF = np.zeros(3)
+        
+        nablaF[0] = 4*xNI[0]**3 - 2 * np.abs(xNI[2])**3 * np.cos(theta)/sigma_tilde**3
+        nablaF[1] = 4*xNI[1]**3 - 2 * np.abs(xNI[2])**3 * np.sin(theta)/sigma_tilde**3
+        nablaF[2] = ( 3*xNI[0]*np.cos(theta) + 3*xNI[1]*np.sin(theta) + 2*np.sqrt(np.abs(xNI[2])) ) * xNI[2]**2 * np.sign(xNI[2]) / sigma_tilde**3  
+    
+        if xNI[0] == 0 and xNI[1] == 0:
+            return nablaF
+        else:
+            return nablaL
+        
+    def _kappa(self, xNI): 
+        """
+        Stabilizing controller for NI-part.
+
+        """
+        kappa_val = np.zeros(2)
+        
+        G = np.zeros([3, 2])
+        G[:,0] = np.array([1, 0, xNI[1]])
+        G[:,1] = np.array([0, 1, -xNI[0]])
+                         
+        zeta_val = self._zeta(xNI)
+        
+        kappa_val[0] = - np.abs( np.dot( zeta_val, G[:,0] ) )**(1/3) * np.sign( np.dot( zeta_val, G[:,0] ) )
+        kappa_val[1] = - np.abs( np.dot( zeta_val, G[:,1] ) )**(1/3) * np.sign( np.dot( zeta_val, G[:,1] ) )
+        
+        return kappa_val
+
+
+    def _F(self, xNI, eta, theta):
+        """
+        Marginal function for NI.
+
+        """
+        
+        sigma_tilde = xNI[0]*np.cos(theta) + xNI[1]*np.sin(theta) + np.sqrt(np.abs(xNI[2]))
+        
+        F = xNI[0]**4 + xNI[1]**4 + np.abs( xNI[2] )**3 / sigma_tilde**2
+        
+        z = eta - self._kappa(xNI, theta)
+        
+        return F + 1/2 * np.dot(z, z)
+      
+    def _Cart2NH(self, coords_Cart): 
+        """
+        Transformation from Cartesian coordinates to non-holonomic (NH) coordinates.
+
+        """
+        
+        xNI = np.zeros(3)
+        
+        xc = coords_Cart[0]
+        yc = coords_Cart[1]
+        alpha = coords_Cart[2]
+        
+        xNI[0] = alpha
+        xNI[1] = xc * np.cos(alpha) + yc * np.sin(alpha)
+        xNI[2] = - 2 * ( yc * np.cos(alpha) - xc * np.sin(alpha) ) - alpha * ( xc * np.cos(alpha) + yc * np.sin(alpha) )
+        
+        return xNI
+  
+    def _NH2ctrl_Cart(self, xNI, uNI): 
+        """
+        Get control for Cartesian NI from NH coordinates.       
+
+        """
+
+        uCart = np.zeros(2)
+        
+        uCart[0] = uNI[1] + 1/2 * uNI[0] * ( xNI[2] + xNI[0] * xNI[1] )
+        uCart[1] = uNI[0]
+        
+        return uCart
+        
+    def get_action(self, observation: np.ndarray):
+        """
+        Same as :func:`~CtrlNominal3WRobotNI.compute_action`, but without invoking the internal clock.
+
+        """
+        
+        xNI = self._Cart2NH( observation[0] ) 
+        kappa_val = self._kappa(xNI)
+        uNI = self.ctrl_gain * kappa_val
+        action = self._NH2ctrl_Cart(xNI, uNI)
+
+        return np.array([action])
+
+    def compute_LF(self, observation):
+        
+        xNI = self._Cart2NH( observation ) 
+        
+        sigma = np.sqrt( xNI[0]**2 + xNI[1]**2 ) + np.sqrt( np.abs(xNI[2]) )
+        
+        return xNI[0]**4 + xNI[1]**4 + np.abs( xNI[2] )**3 / sigma**2

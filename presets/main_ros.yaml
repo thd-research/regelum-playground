@@ -1,5 +1,5 @@
 defaults:
-  - policy: 3wrobot_kin_nomial
+  - policy: 3wrobot_kin_nominal
   - system: 3wrobot_kin_customized
   - scenario: custom_scenario
   - common: ${system}

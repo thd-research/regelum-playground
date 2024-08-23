@@ -19,7 +19,7 @@ if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
                 -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
                --net=host \
                --privileged \
-               --name ros-turtle-nvi ros-regelum-img
+               --name ros-regelum-nvi ros-regelum-img
 
 else
 
@@ -34,6 +34,7 @@ else
                 -v $ROOT_DIR/../regelum-playground:/regelum-playground \
                 -v $ROOT_DIR/../regelum-control:/regelum-control \
                 -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
+                -v $ROOT_DIR/qcar_ws:/qcar_ws \
                --net=host \
                --privileged \
                --name ros-regelum ros-regelum-img

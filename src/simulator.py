@@ -5,6 +5,8 @@ from regelum.system import ComposedSystem, System, ThreeWheeledRobotDynamic
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point, Twist
+from std_msgs.msg import Float64
+
 
 import transformations as tftr 
 import threading
@@ -14,6 +16,7 @@ import time
 import subprocess
 from pathlib import Path
 import logging
+import traceback, sys
 
 
 class RosTurtlebot(CasADi):
@@ -62,7 +65,7 @@ class RosTurtlebot(CasADi):
 
     def odometry_callback(self, msg):
         self.lock.acquire()
-        self.get_velocity(msg)
+        # self.get_velocity(msg)
         # Read current robot state
         x = msg.pose.pose.position.x
 
@@ -194,12 +197,6 @@ class RosTurtlebot(CasADi):
         Return: -1: episode ended
                 otherwise: episode continues
         '''
-        # sleep_duration_s = self.max_step
-        # conv_ns_to_s = lambda x: x / 10**9
-        # if hasattr(self, "_time_measurement"):
-        #     last_computation_duration = conv_ns_to_s(time.perf_counter_ns() - self._time_measurement)
-        #     sleep_duration_s = (sleep_duration_s - last_computation_duration)
-        
         self.update_time()
 
         if self.time >= self.time_final:
@@ -207,13 +204,6 @@ class RosTurtlebot(CasADi):
         
         if rospy.is_shutdown():
             raise RuntimeError("Ros shutdowns")
-
-        # if sleep_duration_s < 0:
-        #     self.loginfo(f"computation takes {last_computation_duration}s \n Please increase your sampling time or upgrade computational unit.")
-        # else:
-        #     time.sleep(sleep_duration_s)
-
-        # self._time_measurement = time.perf_counter_ns()
 
         self.observation = self.get_observation(
                 time=self.time, state=self.new_state, inputs=self.system.inputs
@@ -226,4 +216,107 @@ class MySimulator(CasADi):
     def reset(self):
         super().reset()
 
+
+class RosQcar(RosTurtlebot):
+    def __init__(self, 
+                 system: System | ComposedSystem, 
+                 state_goal: ndarray, 
+                 state_init: ndarray | None = None, 
+                 action_init: ndarray | None = None, 
+                 time_final: float | None = 1, 
+                 max_step: float | None = 0.001, 
+                 first_step: float | None = 0.000001, 
+                 atol: float | None = 0.00001, 
+                 rtol: float | None = 0.001, 
+                 stop_if_reach_target: bool = False, 
+                 use_phy_robot: bool = False):
         
+        self.state_goal = state_goal
+        self.rotation_counter = 0
+        self.prev_theta = 0
+        self.new_state = state_init
+        self.state_init = None
+        self.eps = 0.005
+        self.stop_if_reach_target = stop_if_reach_target
+        self.use_phy_robot = use_phy_robot
+
+        self.L = 0.256
+        self.H = 0.170
+        self.vel_p_coeff = 10
+
+        print("I'm Here 1")
+
+        # Topics
+        rospy.init_node('ros_preset_node', log_level=rospy.INFO)
+        self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
+
+        self.pub_cmd_fr = rospy.Publisher("/qcar/base_fr_controller/command", Float64, queue_size=1, latch=False)
+        self.pub_cmd_fl = rospy.Publisher("/qcar/base_fl_controller/command", Float64, queue_size=1, latch=False)
+        self.pub_cmd_rl = rospy.Publisher("/qcar/rl_controller/command", Float64, queue_size=1, latch=False)
+        self.pub_cmd_rr = rospy.Publisher("/qcar/rr_controller/command", Float64, queue_size=1, latch=False)
+
+        print("I'm Here 2", self.new_state)
+
+        # ROS 
+        self.RATE = rospy.get_param('/rate', int(1/max_step))
+        self.lock = threading.Lock()
+
+        while not hasattr(self, "new_state"):
+            time.sleep(.1)
+
+        print("I'm Here 3")
+        print("action init", action_init)
+
+        try:
+            CasADi.__init__(self, system, self.new_state, action_init, time_final, max_step, first_step, atol, rtol)
+        except Exception as err:
+            print("Error:", err)
+            traceback.print_exc(file=sys.stdout)
+            raise err
+        
+        # print("[sim] system bounds:", system.action_bounds)
+        self._action = np.expand_dims(self.initialize_init_action(), axis=0)
+        self.loginfo = logging.getLogger("regelum").info
+        self.reset()
+        print("I'm Here")
+
+    # Publish action to gazebo
+    def receive_action(self, action):
+        if not hasattr(self, "is_time_for_new_sample") or not self.is_time_for_new_sample:
+            return
+        
+        try:
+            # Check to stop at the target
+            if self.stop_if_reach_target and \
+                np.allclose(self.new_state[0][:2], 
+                            np.zeros_like(self.new_state[0][:2]), 
+                            atol=0.05):
+                action = np.zeros_like(action)
+
+            self.system.receive_action(action)
+            self._action = action
+
+            self.velocity = action[0, 0]
+            self.curvature = action[0, 1]
+
+            alpha1 = np.arctan(self.curvature*self.L/(1 - self.curvature*self.H/2))
+            alpha2 = np.arctan(self.curvature*self.L/(1 + self.curvature*self.H/2))
+
+            msg_fr = Float64()
+            msg_fr.data = alpha1
+
+            msg_fl = Float64()
+            msg_fl.data = alpha2
+
+            msg_rl = Float64()
+            msg_rl.data = -self.velocity*self.vel_p_coeff
+
+            msg_rr = Float64()
+            msg_rr.data =  self.velocity*self.vel_p_coeff
+            
+            self.pub_cmd_fr.publish(msg_fr)
+            self.pub_cmd_fl.publish(msg_fl)
+            self.pub_cmd_rl.publish(msg_rl)
+            self.pub_cmd_rr.publish(msg_rr)
+        except Exception as err:
+            print(err)

@@ -1,4 +1,4 @@
-_target_: src.policy.ThreeWheeledRobotNomial
+_target_: src.policy.ThreeWheeledRobotNominal
 
 optimizer_config: 
   _target_: regelum.CasadiOptimizerConfig

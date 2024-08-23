@@ -3,10 +3,9 @@
 #            --interactive --fps=10 --jobs=1
 
 python3.10 run.py \
-           simulator=ros \
+           simulator=ros_qcar \
            scenario=ros_scenario \
-           policy=3wrobot_kin_nominal \
-           initial_conditions=3wrobot_kin_customized \
-           system=3wrobot_kin \
+           policy=qcar_kin_nominal \
+           system=qcar_kin \
            common.sampling_time=.1 \
            --interactive --fps=10

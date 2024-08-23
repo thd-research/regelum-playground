@@ -1,0 +1,3 @@
+_target_: src.system.QCarRobotKinematicCustomized
+
+state_init: $ initial_conditions.state_init
