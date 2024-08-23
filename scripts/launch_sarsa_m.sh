@@ -1,7 +1,8 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
+    for seed in {1..20}; do
         python3.10 run.py \
-                  +seed=7 \
+                  +seed=$seed \
                   simulator=ros \
                   policy=rc_sarsa_m \
                   initial_conditions=3wrobot_kin_with_spot \
@@ -17,6 +18,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.critic_up_kappa_coeff=1e3 \
                   policy.penalty_factor=1e3 \
                   policy.step_size_multiplier=5
+    done
     else
         python3.10 run.py +seed=7 \
                   policy=rc_sarsa_m \
