@@ -79,6 +79,45 @@ class MyThreeWheeledRobotKinematicCustomized(System):
         return Dstate
 
 
+@ThreeWheeledRobotAnimationWithNewLims.attach
+@DefaultAnimation.attach
+@detach
+class QCarRobotKinematicCustomized(System):
+    """Kinematic three-wheeled robot system implementation. """
+
+    # These private variables are leveraged 
+    # by other components within the codebase.
+
+    # While optional, naming variables 
+    # enhance usability, especially for plotting.
+
+    _name = 'QCarRobotKinematic'
+    _system_type = 'diff_eqn'
+    _dim_state = 3
+    _dim_inputs = 2
+    _dim_observation = 3
+    _observation_naming = _state_naming = ["x [m]", "y [m]", "angle [rad]"]
+    _inputs_naming = ["velocity [m/s]", "steering angle [rad]"]
+    action_bounds = [[-1.2, 1.2], [-1.7, 1.7]]
+
+    def _compute_state_dynamics(self, time, state, inputs):
+        """ Calculate the robot's state dynamics. """
+        self.u_max = 1.7
+        if(abs(inputs[1]) > self.u_max):
+            inputs[1] = self.u_max*rg.sign(inputs[1])
+        
+        # Placeholder for the right-hand side of the differential equations
+        Dstate = rg.zeros(self._dim_state, prototype=state) #
+
+        # Element-wise calculation of the Dstate vector 
+        # based on the system's differential equations
+        Dstate[0] = inputs[0] * rg.cos(state[2])  # v * cos(vartheta)
+        Dstate[1] = inputs[0] * rg.sin(state[2])  # v * sin(vartheta)
+        Dstate[2] = inputs[1]                     # omega
+
+        return Dstate
+
+
 @ThreeWheeledRobotAnimationWithSpotNewLims.attach
 @DefaultAnimation.attach
 @detach
