@@ -139,4 +139,4 @@ simdata
 turtlebot3_ws/
 
 # images
-*.svg
+# *.svg

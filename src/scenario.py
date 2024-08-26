@@ -536,7 +536,7 @@ class MyPPO(RLScenario, ROSMiddleScenario):
                 N_episodes=N_episodes,
                 N_iterations=N_iterations,
                 value_threshold=value_threshold,
-                policy_type=MyPolicyPPO,
+                policy_type=PolicyPPO,
                 policy_model=policy_model,
                 policy_opt_method=policy_opt_method,
                 policy_opt_method_kwargs=policy_opt_method_kwargs,
