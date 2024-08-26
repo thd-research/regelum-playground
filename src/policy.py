@@ -720,6 +720,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             )
         else:
             self.critic_weight_tensor_init = np.load(weight_path)
+            print("Load weight", self.critic_weight_tensor_init)
 
         self.critic_weight_tensor = self.critic_weight_tensor_init
         self.critic_buffer_safe = []

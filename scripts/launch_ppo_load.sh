@@ -1,11 +1,12 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
+    for seed in {1..25}; do
         python3.10 run.py \
-                    +seed=7 \
+                    +seed=$seed \
                     simulator=ros \
                     scenario=ppo_scenario \
                     system=3wrobot_kin_customized \
-                    --experiment=ppo_3wrobot_kin \
+                    --experiment=ppo_report \
                     scenario.N_episodes=1 \
                     scenario.N_iterations=1 \
                     scenario.policy_n_epochs=50 \
@@ -23,10 +24,11 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.critic_td_n=1 \
                     simulator.time_final=50 \
                     common.sampling_time=0.1 \
-                    scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/PolicyModelSaver/model_it_00238" \
-                    scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-19/15-23-09/0/.callbacks/CriticModelSaver/model_it_00238" \
-                    simulator.use_phy_robot=true \
+                    scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-22/18-43-10/0/.callbacks/PolicyModelSaver/model_it_00081" \
+                    scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-22/18-43-10/0/.callbacks/CriticModelSaver/model_it_00081" \
+                    simulator.use_phy_robot=False \
                     --interactive
+    done
     else
         python3.10 run.py \
                     +seed=7 \
