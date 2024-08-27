@@ -285,6 +285,7 @@ class RosQcar(RosTurtlebot):
         if not hasattr(self, "is_time_for_new_sample") or not self.is_time_for_new_sample:
             return
         
+        print("Receive action:", action)
         try:
             # Check to stop at the target
             if self.stop_if_reach_target and \
@@ -320,3 +321,8 @@ class RosQcar(RosTurtlebot):
             self.pub_cmd_rr.publish(msg_rr)
         except Exception as err:
             print(err)
+
+
+    def reset(self):
+        self.receive_action(np.zeros_like(self.action_init))
+        return super().reset()

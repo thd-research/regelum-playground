@@ -104,7 +104,7 @@ class QCarRobotKinematicCustomized(System):
         """ Calculate the robot's state dynamics. """
         self.u_max = 1.7
         # print("Input:", inputs[0], inputs[1], inputs[0, 0])
-        # if(rg.abs(inputs[0]) > self.u_max):
+        # if(inputs[0] > self.u_max or inputs[0] < -self.u_max):
         #     inputs[1] = self.u_max*rg.sign(inputs[1])
         
         # Placeholder for the right-hand side of the differential equations
@@ -114,7 +114,7 @@ class QCarRobotKinematicCustomized(System):
         # based on the system's differential equations
         Dstate[0] = inputs[0] * rg.cos(state[2])  # v * cos(vartheta)
         Dstate[1] = inputs[0] * rg.sin(state[2])  # v * sin(vartheta)
-        Dstate[2] = inputs[1]                     # omega
+        Dstate[2] = inputs[1] * inputs[0]         # omega
 
         return Dstate
 
