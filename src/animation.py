@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import omegaconf
 from pathlib import Path
 from .callback import MyObjectiveTracker
+import numpy as np
+from src.trajectory import trajectory_sine_gen
+
 
 class MyObjectiveAnimation(DeferredComposedAnimation, MyObjectiveTracker):
     def __deferred_init__(self):
@@ -43,6 +46,16 @@ class QcarAnimationWithNewLims(ThreeWheeledRobotAnimation):
 
     def setup(self):
         super().setup()
+
+        x_ref, y_ref, theta_ref = trajectory_sine_gen()
+
+        self.ax.plot(x_ref, y_ref, "-", lw=1)
+
+        for i, (x, y) in enumerate(zip(x_ref, y_ref)):
+            if i >= len(theta_ref):
+                break
+
+            plt.arrow(x, y, np.cos(theta_ref[i]), np.sin(theta_ref[i]), width=0.01)
 
     def lim(self, *args, **kwargs):
         self.ax.set_xlim(-4, 8)

@@ -581,9 +581,8 @@ class StanleyScenario(Scenario):
         else:
             wheel_base = 0.256
         
-
         super().__init__(
-            StanleyController(1.0, 0.1, 1, 0.0, 
+            StanleyController(1.0, 0.1, .5, 0.0, 
                               simulator.system.action_bounds, 
                               wheel_base, 
                               simulator.system,
