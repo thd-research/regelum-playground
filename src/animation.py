@@ -38,6 +38,16 @@ class ThreeWheeledRobotAnimationWithNewLims(ThreeWheeledRobotAnimation):
         self.ax.set_ylim(-4, 4)
         pass
 
+class QcarAnimationWithNewLims(ThreeWheeledRobotAnimation):
+    """Animator for the 3wheel-robot with custom x- and y-plane limits."""
+
+    def setup(self):
+        super().setup()
+
+    def lim(self, *args, **kwargs):
+        self.ax.set_xlim(-4, 8)
+        self.ax.set_ylim(-6, 0)
+        pass
 
 class ThreeWheeledRobotAnimationWithSpot(ThreeWheeledRobotAnimation):
     """Animator for the 3wheel-robot with custom x-, y-plane limits and gaussian cost spot."""

@@ -1,0 +1,5 @@
+_target_: src.scenario.StanleyScenario
+
+simulator: ~ simulator
+sampling_time: $ common.sampling_time
+N_iterations: 1

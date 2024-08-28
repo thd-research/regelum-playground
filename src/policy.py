@@ -29,6 +29,7 @@ from .utilities import (
 
 import os
 
+
 # from regelum.animation import (
 #     ObjectiveAnimation
 # )
@@ -1669,3 +1670,4 @@ class QCarRobotCALFQ(ThreeWheeledRobotCALFQ):
 
     def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):
         return super().calf_filter(critic_weight_tensor, observation, action, goal_radius_disable_calf)
+

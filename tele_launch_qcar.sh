@@ -3,9 +3,10 @@
 #            --interactive --fps=10 --jobs=1
 
 python3.10 run.py \
-           simulator=ros_qcar \
-           scenario=ros_scenario \
-           policy=qcar_kin_nominal \
-           system=qcar_kin \
-           common.sampling_time=.1 \
-           --interactive --fps=10
+        scenario=stanley_scenario \
+        initial_conditions=qcar_kin \
+        common=qcar_kin \
+        system=qcar_kin_with_trajectory \
+        common.sampling_time=.1 \
+        common.time_final=50 \
+        --interactive --fps=20
