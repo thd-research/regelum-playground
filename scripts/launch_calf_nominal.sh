@@ -6,7 +6,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy=rc_calfq \
                   initial_conditions=3wrobot_kin_with_spot \
                   +policy.nominal_kappa_params="[0.1, 1.5, -.15]" \
-                  scenario=my_scenario \
+                  scenario=calf_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
                   simulator.time_final=40 scenario.N_iterations=1 \
@@ -24,7 +24,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
         python3.10 run.py +seed=7 \
                   policy=rc_calfq \
                   initial_conditions=3wrobot_kin_with_spot \
-                  scenario=my_scenario \
+                  scenario=calf_scenario \
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
                   simulator.time_final=40 scenario.N_iterations=1 \

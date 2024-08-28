@@ -2,7 +2,7 @@ python3.10 run.py \
             +seed=7 \
             simulator=ros_qcar \
             policy=rc_calf_qcar \
-            scenario=my_scenario \
+            scenario=calf_scenario \
             system=qcar_kin \
             common.sampling_time=0.1 \
             simulator.time_final=40 scenario.N_iterations=40 \

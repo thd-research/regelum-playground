@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from typing import Union, Dict, Any
 from pathlib import Path
-from src.scenario import MyScenario
+from src.scenario import CALFScenario
 from rich.logging import RichHandler
 
 
@@ -63,7 +63,7 @@ class MyObjectiveTracker(ObjectiveTracker):
 
 class CALFHistoricalDataCallback(HistoricalDataCallback):
     def is_target_event(self, obj, method, output, triggers):
-        if isinstance(obj, MyScenario) and method == "post_compute_action":
+        if isinstance(obj, CALFScenario) and method == "post_compute_action":
             print("Enter CALFHistoricalDataCallback")   
             return True
         
@@ -126,7 +126,7 @@ class PolicyNumpyModelSaver(HistoricalCallback):
         self.iteration_counter = 1
 
     def is_target_event(self, obj, method, output, triggers):
-        return isinstance(obj, MyScenario) and method == "reset_iteration"
+        return isinstance(obj, CALFScenario) and method == "reset_iteration"
 
     def on_function_call(self, obj, method, outputs):
         save_model(

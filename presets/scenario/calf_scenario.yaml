@@ -1,4 +1,4 @@
-_target_: src.scenario.MyScenario
+_target_: src.scenario.CALFScenario
 
 
 policy: ~ policy

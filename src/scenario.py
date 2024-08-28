@@ -443,7 +443,7 @@ class RosMPC(RLScenario, ROSMiddleScenario):
             ),
         )
 
-class MyScenario(ROSMiddleScenario):
+class CALFScenario(ROSMiddleScenario):
     def run_episode(self, episode_counter, iteration_counter):
         self.episode_counter = episode_counter
         self.iteration_counter = iteration_counter
