@@ -11,6 +11,7 @@ class StanleyController(Policy):
                  yaw_rate_gain=0.0, 
                  steering_damp_gain=0.0, 
                  action_bounds=[[-1.2, 1.2], [-np.deg2rad(24), np.deg2rad(24)]],
+                 max_abs_linear_vel: float=.5,
                  system=None,
                  trajectory_gen: TrajectoryGenerator=None):
         
@@ -46,6 +47,7 @@ class StanleyController(Policy):
         self.k_damp_steer = steering_damp_gain
         self.wheelbase = system.wheelbase
         self.steering_angle = 0
+        self.max_abs_linear_vel = max_abs_linear_vel
 
         self.trajectory_gen = trajectory_gen
         self.px, self.py, self.pyaw = self.trajectory_gen.trajectory
@@ -122,8 +124,9 @@ class StanleyController(Policy):
         
         # p_speed = self.p_controller(self.speed, target_velocity)
         current_speed = self.speed_computation(yaw_error, target_velocity)
-        current_speed = min(current_speed, 0.5)
-        # print(crosstrack_steering_error)
+        print(f"i: {target_index} - dx: {dx} - dy: {dy} - dyaw: {yaw_error} - cxt_error: {crosstrack_error} - limited_steering_angle: {limited_steering_angle} - current_speed: {current_speed}")
+
+        current_speed = min(current_speed, self.max_abs_linear_vel)
 
         return limited_steering_angle, target_index, crosstrack_error, dx, dy, current_speed
     
