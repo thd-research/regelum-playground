@@ -11,7 +11,7 @@ running_objective:
   quadratic_model:
     _target_: regelum.model.ModelQuadLin
     # weights: = numpy.array([100000., 2000., 1, 0, 0])
-    weights: = numpy.array([20., 100., 1, 0, 0])
+    weights: = numpy.array([100., 100., 1, 0, 0])
     quad_matrix_type: diagonal
     is_with_linear_terms: False
   spot_gain: 100

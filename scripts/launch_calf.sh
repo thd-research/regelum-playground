@@ -1,6 +1,6 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then 
-    for seed in {1..20}; do
+    for seed in {5..20}; do
         python3.10 run.py \
                   +seed=$seed \
                   simulator=ros \
@@ -18,8 +18,8 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.critic_up_kappa_coeff=1e3 \
                   policy.penalty_factor=1e3 \
                   policy.step_size_multiplier=5 \
-                  policy.nominal_only=False \
-                  --interactive
+                  policy.nominal_only=False
+                #   --interactive
     done
     else
         python3.10 run.py +seed=7 \
