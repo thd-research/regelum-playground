@@ -19,8 +19,6 @@ from regelum.system import System
 from regelum.animation import (
     ObjectiveAnimation
 )
-# from regelum.typing import RgArray
-# from src.trajectory import TrajectoryGenerator
 
 
 # In the following two classes we want to alter their respective animation callbacks, so we:
@@ -107,9 +105,8 @@ class QCarRobotKinematicCustomized(System):
     _inputs_naming = ["velocity [m/s]", "steering angle [rad]"]
     action_bounds = [[-1.2, 1.2], [-1.7, 1.7]]
 
-    def __init__(self, system_parameters_init: Dict[str, float] = None, state_init: ndarray | None = None, inputs_init: ndarray | None = None):
-        super().__init__(system_parameters_init, state_init, inputs_init)
-        # self.trajectory = TrajectoryGenerator(state_init)
+    wheelbase = 0.256
+    axle_len = 0.170
 
     def _compute_state_dynamics(self, time, state, inputs):
         """ Calculate the robot's state dynamics. """
@@ -129,12 +126,29 @@ class QCarRobotKinematicCustomized(System):
 
         return Dstate
 
-
 @QcarAnimationWithNewLims.attach
 @DefaultAnimation.attach
 @detach
 class QCarRobotKinematicWithTrajectory(QCarRobotKinematicCustomized):
     pass
+    # def __init__(self, system_parameters_init: Dict[str, float] = None, state_init: ndarray | None = None, inputs_init: ndarray | None = None):
+    #     super().__init__(system_parameters_init, state_init, inputs_init)
+    #     self.traj_gen = TrajectoryGenerator(state_init)
+    #     self.current_index = 0
+
+    # def _get_observation(self, time: float | MX, state: RgArray, inputs: RgArray) -> RgArray:
+    #     fx = state[0] + self.wheelbase * rg.cos(state[2])
+    #     fy = state[1] + self.wheelbase * rg.sin(state[2])
+
+    #     (px, py, pyaw), self.current_index = self.traj_gen.get_nearest_point(state)
+
+    #     dx = fx - px    # Find the x-axis of the front axle relative to the path
+    #     dy = fy - py    # Find the y-axis of the front axle relative to the path
+    #     dyaw = self.traj_gen.normalise_angle(pyaw - state[2])
+    #     return rg.array([dx, dy, dyaw])
+    
+    # def get_current_index(self):
+    #     return self.current_index
 
 
 @ThreeWheeledRobotAnimationWithSpotNewLims.attach

@@ -240,8 +240,8 @@ class RosQcar(RosTurtlebot):
         self.stop_if_reach_target = stop_if_reach_target
         self.use_phy_robot = use_phy_robot
 
-        self.L = 0.256
-        self.H = 0.170
+        self.L = system.wheelbase
+        self.H = system.axle_len
         self.vel_p_coeff = 10
 
         print("I'm Here 1")

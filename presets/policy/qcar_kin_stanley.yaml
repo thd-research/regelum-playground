@@ -1,0 +1,13 @@
+_target_: src.stanley_policy.StanleyController
+
+control_gain: = 1.0
+softening_gain: = 0.1
+yaw_rate_gain: = 0.5
+steering_damp_gain: = 0.0
+system: ~ system
+
+action_bounds: = np.array([[-1.2, 1.2], [-1.7, 1.7]])
+trajectory_gen:
+  _target_: src.trajectory.TrajectoryGenerator
+  init_state: $ initial_conditions.state_init
+  trajectory_type: Sine

@@ -6,8 +6,6 @@ from regelum.data_buffers import DataBuffer
 from typing import Optional, Dict, Any, Callable, Type
 
 from src.ppo_policy import MyPolicyPPO
-from src.stanley_policy import StanleyController
-from src.trajectory import trajectory_sine_gen
 
 from regelum import RegelumBase
 from regelum.policy import Policy, RLPolicy, PolicyPPO
@@ -575,18 +573,9 @@ class MyPPO(RLScenario, ROSMiddleScenario):
 
 
 class StanleyScenario(Scenario):
-    def __init__(self, simulator: Simulator, sampling_time: float = 0.1, running_objective: RunningObjective | None = None, constraint_parser: ConstraintParser | None = None, observer: Observer | None = None, N_episodes: int = 1, N_iterations: int = 1, value_threshold: float = np.inf, discount_factor: float = 1):
-        if hasattr(simulator, "L"):
-            wheel_base = getattr(simulator, "L")
-        else:
-            wheel_base = 0.256
-        
+    def __init__(self, policy: Policy, simulator: Simulator, sampling_time: float = 0.1, running_objective: RunningObjective | None = None, constraint_parser: ConstraintParser | None = None, observer: Observer | None = None, N_episodes: int = 1, N_iterations: int = 1, value_threshold: float = np.inf, discount_factor: float = 1):
         super().__init__(
-            StanleyController(1.0, 0.1, .5, 0.0, 
-                              simulator.system.action_bounds, 
-                              wheel_base, 
-                              simulator.system,
-                              *trajectory_sine_gen(*simulator.system.state[0, :2])),
+            policy,
             simulator, 
             sampling_time, 
             running_objective, 

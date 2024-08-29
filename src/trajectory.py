@@ -21,11 +21,21 @@ class TrajectoryGenerator():
         else:
             raise KeyError
 
-    def get_observation(self, state, action):
-        return 
+    def get_nearest_point(self, state):
+        id = self.get_nearest_idx(state)
+        p = self.trajectory[id]
+        return [*p], id
+    
+    def get_nearest_idx(self, state):
+        dist = np.linalg.norm(self.trajectory - state)
+        return np.argmin(dist)
+    
+    @classmethod
+    def normalise_angle(self, angle):
+        return np.atan2(np.sin(angle), np.cos(angle))
 
 
-def trajectory_sine_gen(x_initial=-3, y_initial=-3):
+def trajectory_sine_gen(x_initial=-3, y_initial=-3, return_vect=False):
     print("trajectory_sine_gen:", x_initial, y_initial)
     x_ref = np.linspace(0, 10, 100)
     y_ref = 2*np.sin(2 * np.pi * x_ref * 0.15)
@@ -37,4 +47,7 @@ def trajectory_sine_gen(x_initial=-3, y_initial=-3):
     x_ref = x_ref + (x_initial - x_ref[0])
     y_ref = y_ref + (y_initial - y_ref[0])
 
-    return x_ref, y_ref, theta_ref
+    if not return_vect:
+        return x_ref, y_ref, theta_ref
+    else:
+        return np.vstack([x_ref, y_ref, theta_ref])

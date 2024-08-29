@@ -4,6 +4,7 @@
 
 python3.10 run.py \
         scenario=stanley_scenario \
+        policy=qcar_kin_stanley \
         initial_conditions=qcar_kin \
         common=qcar_kin \
         system=qcar_kin_with_trajectory \

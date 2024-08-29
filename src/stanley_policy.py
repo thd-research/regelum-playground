@@ -1,6 +1,7 @@
 from regelum.policy import Policy
 from math import cos, sin, atan2
 import numpy as np
+from src.trajectory import TrajectoryGenerator
 
 
 class StanleyController(Policy):
@@ -10,11 +11,8 @@ class StanleyController(Policy):
                  yaw_rate_gain=0.0, 
                  steering_damp_gain=0.0, 
                  action_bounds=[[-1.2, 1.2], [-np.deg2rad(24), np.deg2rad(24)]],
-                 wheelbase=0.0,
                  system=None,
-                 path_x=None, 
-                 path_y=None, 
-                 path_yaw=None):
+                 trajectory_gen: TrajectoryGenerator=None):
         
         """
         Stanley Controller
@@ -25,7 +23,6 @@ class StanleyController(Policy):
         :param yaw_rate_gain:               (float) yaw rate gain [rad]
         :param steering_damp_gain:          (float) steering damp gain
         :param action_bounds:               (float) vehicle's linear velocity [m/s] and steering limits [rad]
-        :param wheelbase:                   (float) vehicle's wheelbase [m]
         :param path_x:                      (numpy.ndarray) list of x-coordinates along the path
         :param path_y:                      (numpy.ndarray) list of y-coordinates along the path
         :param path_yaw:                    (numpy.ndarray) list of discrete yaw values along the path
@@ -47,12 +44,11 @@ class StanleyController(Policy):
         self.k_soft = softening_gain
         self.k_yaw_rate = yaw_rate_gain
         self.k_damp_steer = steering_damp_gain
-        self.wheelbase = wheelbase
+        self.wheelbase = system.wheelbase
         self.steering_angle = 0
 
-        self.px = path_x
-        self.py = path_y
-        self.pyaw = path_yaw
+        self.trajectory_gen = trajectory_gen
+        self.px, self.py, self.pyaw = self.trajectory_gen.trajectory
 
         super().__init__(system=system, action_bounds=action_bounds)
 
@@ -113,7 +109,6 @@ class StanleyController(Policy):
         return ReLu * target_speed + 0.1
 
     def stanley_control(self, x, y, yaw, target_velocity, steering_angle):
-
         target_index, dx, dy, absolute_error = self.find_target_path_id(x, y, yaw)
         yaw_error = self.calculate_yaw_term(target_index, yaw)
         crosstrack_steering_error, crosstrack_error = self.calculate_crosstrack_term(target_velocity, yaw, dx, dy, absolute_error)
