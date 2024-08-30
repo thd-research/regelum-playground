@@ -1,6 +1,6 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then 
-    for seed in {9..20}; do
+    for seed in {1..7}; do
         python3.10 run.py \
                   +seed=$seed \
                   simulator=ros \

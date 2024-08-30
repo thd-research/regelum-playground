@@ -22,9 +22,9 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.critic_desired_decay=1e-6 \
                   policy.critic_low_kappa_coeff=1e-1 \
                   policy.critic_up_kappa_coeff=1e3 \
-                  policy.penalty_factor=1e3 \
+                  policy.penalty_factor=1e2 \
                   policy.step_size_multiplier=5 \
-                  policy.weight_path="/regelum-playground/regelum_data/outputs/2024-08-23/11-36-51/0/.callbacks/PolicyNumpyModelSaver/model_it_00023.npy" \
+                  policy.weight_path="/regelum-playground/regelum_data/outputs/2024-08-29/12-33-12/0/.callbacks/PolicyNumpyModelSaver/model_it_00015.npy" \
                   policy.nominal_only=False \
                   simulator.use_phy_robot=False \
                   --interactive

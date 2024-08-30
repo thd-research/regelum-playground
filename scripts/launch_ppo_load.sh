@@ -24,8 +24,8 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.critic_td_n=1 \
                     simulator.time_final=50 \
                     common.sampling_time=0.1 \
-                    scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-22/18-43-10/0/.callbacks/PolicyModelSaver/model_it_00081" \
-                    scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-22/18-43-10/0/.callbacks/CriticModelSaver/model_it_00081" \
+                    scenario.policy_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-28/07-47-00/0/.callbacks/PolicyModelSaver/model_it_00089" \
+                    scenario.critic_checkpoint_path="/regelum-playground/regelum_data/outputs/2024-08-28/07-47-00/0/.callbacks/CriticModelSaver/model_it_00089" \
                     simulator.use_phy_robot=False \
                     --interactive
     done
