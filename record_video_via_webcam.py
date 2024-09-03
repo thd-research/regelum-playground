@@ -15,13 +15,24 @@ if os.name == 'nt':
 else:
     cap = cv.VideoCapture("/dev/video2")
 
+fourcc = cv.VideoWriter_fourcc(*'MJPG')
+
+cap.set(cv.CAP_PROP_FOURCC, fourcc)
+
 profile = {
-    "high": (1080, 920),
+    "4k": (3264, 2448),
+    "2k": (2560, 1440),
+    "fullhd": (1920, 1080),
+    "high": (1280, 720),
     "medium": (640, 480)
 }
 
-fourcc = cv.VideoWriter_fourcc(*'MJPG')
-out = cv.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, profile['medium'])
+chosen_profile = profile["fullhd"]
+
+cap.set(cv.CAP_PROP_FRAME_WIDTH, chosen_profile[0])
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, chosen_profile[1])
+
+out = cv.VideoWriter(os.path.join(ROOT_DIR, video_name + '.avi'), fourcc, 30.0, chosen_profile)
 
 
 try:
