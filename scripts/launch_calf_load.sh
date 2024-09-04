@@ -17,6 +17,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
                   simulator.time_final=40 scenario.N_iterations=1 \
+                  --single-thread \
                   --jobs=-1 \
                   --experiment=calf_report \
                   policy.critic_desired_decay=1e-6 \

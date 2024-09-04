@@ -6,6 +6,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     simulator=ros \
                     scenario=ppo_scenario \
                     system=3wrobot_kin_customized \
+                    --single-thread \
                     --experiment=ppo_report \
                     scenario.N_episodes=1 \
                     scenario.N_iterations=1 \

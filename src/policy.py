@@ -1398,6 +1398,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         # /DEBUG
         dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
 
+        print("dist_to_spot:", dist_to_spot, observation)
         if dist_to_spot <= 0.1:
             # Slow the robot down if robot is near the obstacle
             action[0, 0] = np.clip(
