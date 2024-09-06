@@ -6,7 +6,7 @@ import omegaconf
 from pathlib import Path
 from .callback import MyObjectiveTracker
 import numpy as np
-from src.trajectory import trajectory_sine_gen
+from src.trajectory import TrajectoryGenerator
 
 
 class MyObjectiveAnimation(DeferredComposedAnimation, MyObjectiveTracker):
@@ -44,11 +44,21 @@ class ThreeWheeledRobotAnimationWithNewLims(ThreeWheeledRobotAnimation):
 class QcarAnimationWithNewLims(ThreeWheeledRobotAnimation):
     """Animator for the 3wheel-robot with custom x- and y-plane limits."""
 
-    def setup(self):
+    def setup(self, init_file_name="qcar_kin.yaml", policy_file_name="qcar_kin_stanley.yaml"):
         super().setup()
+        config_state_init = omegaconf.OmegaConf.load(
+            Path(__file__).parent.parent / "presets" / "initial_conditions" / init_file_name
+        )["state_init"]
+        traj_type = omegaconf.OmegaConf.load(
+            Path(__file__).parent.parent / "presets" / "policy" / policy_file_name
+        )["trajectory_gen"]["trajectory_type"]
 
-        x_ref, y_ref, theta_ref = trajectory_sine_gen()
+        initial_state = eval(config_state_init.strip(" =").replace("numpy", "np"))
+        
+        x_ref, y_ref, theta_ref = TrajectoryGenerator(initial_state, traj_type).trajectory
 
+        self.x_lim = (np.min(x_ref)-1, np.max(x_ref)+1)
+        self.y_lim = (np.min(y_ref)-1, np.max(y_ref)+1)
         self.ax.plot(x_ref, y_ref, "-", lw=1)
 
         for i, (x, y) in enumerate(zip(x_ref, y_ref)):
@@ -58,8 +68,8 @@ class QcarAnimationWithNewLims(ThreeWheeledRobotAnimation):
             plt.arrow(x, y, np.cos(theta_ref[i]), np.sin(theta_ref[i]), width=0.01)
 
     def lim(self, *args, **kwargs):
-        self.ax.set_xlim(-4, 8)
-        self.ax.set_ylim(-6, 0)
+        self.ax.set_xlim(*self.x_lim)
+        self.ax.set_ylim(*self.y_lim)
         pass
 
 class ThreeWheeledRobotAnimationWithSpot(ThreeWheeledRobotAnimation):

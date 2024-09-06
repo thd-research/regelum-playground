@@ -18,6 +18,8 @@ class TrajectoryGenerator():
 
         if trajectory_type == "Sine":
             self.trajectory = trajectory_sine_gen(*init_state[0, :2])
+        elif trajectory_type == "Linear":
+            self.trajectory = trajectory_linear_gen(init_state[0])
         else:
             raise KeyError
 
@@ -49,6 +51,23 @@ def trajectory_sine_gen(x_initial=-3, y_initial=-3, return_vect=False):
 
     x_ref = x_ref + (x_initial - x_ref[0])
     y_ref = y_ref + (y_initial - y_ref[0])
+
+    if not return_vect:
+        return x_ref, y_ref, theta_ref
+    else:
+        return np.vstack([x_ref, y_ref, theta_ref])
+
+
+def trajectory_linear_gen(initial_state, goal_state=[0, 0, 0], return_vect=False):
+    x_ref = np.linspace(initial_state[0], goal_state[0], 100)
+    y_ref = np.linspace(initial_state[1], goal_state[1], 100)
+
+    # theta_ref = np.arctan2(np.diff(x_ref), np.diff(y_ref)) # dependencies: x_ref[-1], x_ref[-2], y_ref[-1], y_ref[-2]
+    theta_ref = np.arctan2(np.diff(y_ref), np.diff(x_ref)) # dependencies: x_ref[-1], x_ref[-2], y_ref[-1], y_ref[-2]
+    theta_ref = np.append(theta_ref, goal_state[2])
+
+    x_ref = x_ref + (initial_state[0] - x_ref[0])
+    y_ref = y_ref + (initial_state[1] - y_ref[0])
 
     if not return_vect:
         return x_ref, y_ref, theta_ref

@@ -11,4 +11,4 @@ action_bounds: = np.array([[-1.2, 1.2], [-1.7, 1.7]])
 trajectory_gen:
   _target_: src.trajectory.TrajectoryGenerator
   init_state: $ initial_conditions.state_init
-  trajectory_type: Sine
+  trajectory_type: Linear
