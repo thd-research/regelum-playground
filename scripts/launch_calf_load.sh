@@ -6,7 +6,7 @@
 
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
-    for seed in {1..25}; do
+    for seed in {12..12}; do
         python3.10 run.py \
                   +seed=$seed \
                   simulator=ros \
@@ -17,6 +17,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   system=3wrobot_kin_with_spot \
                   common.sampling_time=0.1 \
                   simulator.time_final=40 scenario.N_iterations=1 \
+                  --single-thread \
                   --jobs=-1 \
                   --experiment=calf_report \
                   policy.critic_desired_decay=1e-6 \
@@ -26,7 +27,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.step_size_multiplier=5 \
                   policy.weight_path="/regelum-playground/regelum_data/outputs/2024-08-29/12-33-12/0/.callbacks/PolicyNumpyModelSaver/model_it_00015.npy" \
                   policy.nominal_only=False \
-                  simulator.use_phy_robot=False \
+                  simulator.use_phy_robot=true \
                   --interactive
     done
     else

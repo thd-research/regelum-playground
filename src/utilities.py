@@ -83,7 +83,13 @@ def to_row_vec(argin):
         return np.array([[argin]])
 
     if argin.ndim < 2:
-        return np.reshape(argin, (1, argin.size))
+        try:
+            return np.reshape(argin, (1, argin.size))
+        except Exception as err:
+            print("Error:", err)
+            print("argin:", argin)
+            raise err
+        
     elif argin.ndim == 2:
         if argin.shape[0] > argin.shape[1]:
             return argin.T

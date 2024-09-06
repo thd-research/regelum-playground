@@ -1,6 +1,6 @@
 if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
     then  
-    for seed in {2..20}; do
+    for seed in {1..20}; do
         python3.10 run.py \
                     +seed=$seed \
                     simulator=ros \
@@ -23,7 +23,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                     scenario.discount_factor=0.9 \
                     scenario.cliprange=0.2 \
                     scenario.critic_td_n=1 \
-                    simulator.time_final=50 \
+                    simulator.time_final=30 \
                     common.sampling_time=0.1
                     # --interactive
         done

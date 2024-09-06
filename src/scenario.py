@@ -450,8 +450,8 @@ class MyScenario(ROSMiddleScenario):
         while self.sim_status != "episode_ended":
             self.sim_status = self.step()
             
-            if np.linalg.norm(self.observation[0,:2]) < 0.001:
-                break
+            # if np.linalg.norm(self.observation[0,:2]) < 0.001:
+            #     break
     
     def calculate_value(self, running_objective: float, time: float):
         if hasattr(self.policy, "score"):
