@@ -2,7 +2,7 @@ _target_: src.policy.QCarRobotCALFQ
 
 # action_bounds: = np.array([[-0.22, 0.22], [-2.84, 2.84]])
 system: ~ system
-R1_diag: = [1, 1000, 1e-1, 0, 0]
+R1_diag: = [100, 1000, 1, 0, 0]
 weight_path: = None
 critic_desired_decay: = 1e-5
 critic_low_kappa_coeff: = 1e-1
@@ -10,3 +10,19 @@ critic_up_kappa_coeff: = 1e3
 penalty_factor: = 1e1
 step_size_multiplier: = 1
 nominal_only: = False
+
+stabilizer:
+  _target_: src.stanley_policy.StanleyController
+
+  control_gain: 2.5
+  softening_gain: 0.7
+  yaw_rate_gain: 0.5
+  steering_damp_gain: 0.0
+  system: ~ system
+  max_abs_linear_vel: 1.0
+
+  action_bounds: = np.array([[-1.2, 1.2], [-1.7, 1.7]])
+  trajectory_gen:
+    _target_: src.trajectory.TrajectoryGenerator
+    init_state: $ initial_conditions.state_init
+    trajectory_type: Linear

@@ -613,7 +613,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         step_size_multiplier: int=1,
         nominal_only: bool=False,
         nominal_kappa_params: None|list[float] = [2, 15, -1.50],
-        action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]])
+        action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]]),
+        obstacle_info = [-0.5, -0.5, 0.2]
     ):
         super().__init__()
         self.nominal_only = nominal_only
@@ -632,9 +633,9 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.buffer_size = 20
 
         # CALFQ
-        self.obstacle_x = -0.5
-        self.obstacle_y = -0.5
-        self.obstacle_sigma = 0.2
+        self.obstacle_x = obstacle_info[0]
+        self.obstacle_y = obstacle_info[1]
+        self.obstacle_sigma = obstacle_info[2]
 
         self.penalty_factor = penalty_factor
 
@@ -654,8 +655,8 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.critic_max_desired_decay = 1e-1 * self.action_sampling_time
         self.critic_weight_change_penalty_coeff = 1.0
 
-        if nominal_kappa_params is not None and not hasattr(self, "nominal_ctrl"):
-            self.nominal_ctrl = ThreeWheeledRobotNominal(action_bounds=action_bounds,
+        if nominal_kappa_params is not None and not hasattr(self, "stabilizer"):
+            self.stabilizer = ThreeWheeledRobotNominal(action_bounds=action_bounds,
                                                         kappa_params=nominal_kappa_params)
 
         self.action_min = np.array( action_bounds[:,0] )
@@ -1361,7 +1362,7 @@ class ThreeWheeledRobotCALFQ(Policy):
             return self.get_safe_action(observation)
 
     def get_safe_action(self, observation: np.ndarray) -> np.ndarray:
-        return self.nominal_ctrl.get_action(observation)
+        return self.stabilizer.get_action(observation)
 
     def get_action(self, observation: np.ndarray) -> np.ndarray:
 
@@ -1660,12 +1661,25 @@ class QCarRobotCALFQ(ThreeWheeledRobotCALFQ):
                  penalty_factor: float = 10, 
                  step_size_multiplier: int = 1, 
                  nominal_only: bool = False, 
-                 nominal_kappa_params: None | list[float] = [2, 15, -1.5], 
-                 action_bounds=np.array([[-1.2, 1.2], [-1.7, 1.7]])):
-        self.nominal_ctrl = QCarRobotNomial(action_bounds,
-                                            ctrl_gain=10)
+                 action_bounds=np.array([[-1.2, 1.2], [-1.7, 1.7]]),
+                 stabilizer=None):
+        
+        if stabilizer is not None:
+            self.stabilizer = stabilizer
+
         nominal_kappa_params = None
-        super().__init__(system, R1_diag, weight_path, critic_desired_decay, critic_low_kappa_coeff, critic_up_kappa_coeff, penalty_factor, step_size_multiplier, nominal_only, nominal_kappa_params, action_bounds)
+        super().__init__(system=system, 
+                         R1_diag=R1_diag, 
+                         weight_path=weight_path, 
+                         critic_desired_decay=critic_desired_decay, 
+                         critic_low_kappa_coeff=critic_low_kappa_coeff, 
+                         critic_up_kappa_coeff=critic_up_kappa_coeff, 
+                         penalty_factor=penalty_factor, 
+                         step_size_multiplier=step_size_multiplier, 
+                         nominal_only=nominal_only, 
+                         nominal_kappa_params=nominal_kappa_params, 
+                         action_bounds=action_bounds,
+                         obstacle_info=[-1.5, -1.5, 0.7])
 
 
     def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):
