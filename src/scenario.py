@@ -572,8 +572,17 @@ class MyPPO(RLScenario, ROSMiddleScenario):
     #     return self.data_buffer
 
 
-class StanleyScenario(Scenario):
-    def __init__(self, policy: Policy, simulator: Simulator, sampling_time: float = 0.1, running_objective: RunningObjective | None = None, constraint_parser: ConstraintParser | None = None, observer: Observer | None = None, N_episodes: int = 1, N_iterations: int = 1, value_threshold: float = np.inf, discount_factor: float = 1):
+class StanleyScenario(ROSMiddleScenario):
+    def __init__(self, 
+                 policy: Policy, 
+                 simulator: Simulator, 
+                 sampling_time: float = 0.1, 
+                 running_objective: RunningObjective | None = None, 
+                 constraint_parser: ConstraintParser | None = None, 
+                 observer: Observer | None = None, 
+                 N_episodes: int = 1, 
+                 N_iterations: int = 1, 
+                 value_threshold: float = np.inf, discount_factor: float = 1):
         super().__init__(
             policy,
             simulator, 

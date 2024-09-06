@@ -210,7 +210,7 @@ class RosTurtlebot(CasADi):
             )
         self.state = self.new_state
         pass
-
+        
 
 class MySimulator(CasADi):
     def reset(self):
@@ -281,8 +281,11 @@ class RosQcar(RosTurtlebot):
         print("I'm Here")
 
     # Publish action to gazebo
-    def receive_action(self, action):
-        if not hasattr(self, "is_time_for_new_sample") or not self.is_time_for_new_sample:
+    def receive_action(self, action, force=False):
+        if not force and (
+                    not hasattr(self, "is_time_for_new_sample") or
+                    not self.is_time_for_new_sample
+                    ):
             return
         
         print("Receive action:", action)
@@ -324,5 +327,5 @@ class RosQcar(RosTurtlebot):
 
 
     def reset(self):
-        self.receive_action(np.zeros_like(self.action_init))
+        self.receive_action(np.zeros((1, self.system.dim_inputs)), force=True)
         return super().reset()

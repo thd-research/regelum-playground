@@ -30,6 +30,9 @@ class TrajectoryGenerator():
         dist = np.linalg.norm(self.trajectory - state)
         return np.argmin(dist)
     
+    def is_last_point(self, index):
+        return index >= len(self.trajectory[0]) - 1
+    
     @classmethod
     def normalise_angle(self, angle):
         return np.atan2(np.sin(angle), np.cos(angle))

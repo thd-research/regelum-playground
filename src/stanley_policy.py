@@ -124,6 +124,9 @@ class StanleyController(Policy):
         
         # p_speed = self.p_controller(self.speed, target_velocity)
         current_speed = self.speed_computation(yaw_error, target_velocity)
+        if self.trajectory_gen.is_last_point(target_index):
+            print("Is the last index")
+            current_speed *= absolute_error**2
         print(f"i: {target_index} - dx: {dx} - dy: {dy} - dyaw: {yaw_error} - cxt_error: {crosstrack_error} - limited_steering_angle: {limited_steering_angle} - current_speed: {current_speed}")
 
         current_speed = min(current_speed, self.max_abs_linear_vel)
