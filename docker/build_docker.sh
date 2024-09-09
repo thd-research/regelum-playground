@@ -7,9 +7,9 @@ cd $ROOT_DIR
 
 if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
   then
-    docker build -t ros-regelum-img -f $ROOT_DIR/docker/Dockerfile $ROOT_DIR \
+    docker build -t ros-regelum-img-nv -f $ROOT_DIR/docker/Dockerfile $ROOT_DIR \
                                   --network=host \
-                                  --build-arg from=nvidia/cuda:11.4.2-cudnn8-runtime-ubuntu20.04
+                                  --build-arg from=nvidia/cuda:11.4.3-cudnn8-runtime-ubuntu20.04
 
 else
     echo "[!] If you use nvidia gpu, please rebuild with -n or --nvidia argument"

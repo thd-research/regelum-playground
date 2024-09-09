@@ -19,7 +19,7 @@ if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
                 -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
                --net=host \
                --privileged \
-               --name ros-regelum-nvi ros-regelum-img
+               --name ros-regelum-nvi ros-regelum-img-nv
 
 else
 
