@@ -22,7 +22,7 @@ if [[ $1 = "--ros" ]] || [[ $1 = "-r" ]]
                   policy.critic_up_kappa_coeff=4e2 \
                   policy.penalty_factor=1e2 \
                   policy.step_size_multiplier=5 \
-                  policy.weight_path="/regelum-playground/regelum_data/outputs/2024-08-30/03-58-04/0/.callbacks/PolicyNumpyModelSaver/model_it_00033.npy" \
+                  policy.weight_path="/regelum-playground/checkpoints/sarsa_m_240830/policy/model_it_00033.npy" \
                   simulator.use_phy_robot=true \
                   --interactive
     done
