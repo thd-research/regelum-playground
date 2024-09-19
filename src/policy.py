@@ -614,16 +614,20 @@ class ThreeWheeledRobotCALFQ(Policy):
         nominal_only: bool=False,
         nominal_kappa_params: None|list[float] = [2, 15, -1.50],
         action_bounds = np.array([[-0.22, 0.22], [-2.84, 2.84]]),
-        obstacle_info = [-0.5, -0.5, 0.2]
+        obstacle_info = [-0.5, -0.5, 0.2],
+        **kwargs
     ):
         super().__init__()
+        self.kwargs = kwargs
+
+        self.restricted_linear_vel = float(self.kwargs.get("restricted_linear_vel", "0.01"))
         self.nominal_only = nominal_only
 
         # Critic
         self.critic_learn_rate = 0.1
         self.critic_num_grad_steps = 20
         # self.critic_struct = "quad-mix"
-        self.critic_struct = "quad-nomix"
+        self.critic_struct = kwargs.get("critic_struct", "quad-nomix")
 
         critic_big_number = 1e3
 
@@ -1397,12 +1401,12 @@ class ThreeWheeledRobotCALFQ(Policy):
         # /DEBUG
         dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
 
-        if dist_to_spot <= 0.1:
+        if dist_to_spot <= self.obstacle_sigma:
             # Slow the robot down if robot is near the obstacle
             action[0, 0] = np.clip(
                 action[0, 0],
-                -0.01,
-                0.01
+                -self.restricted_linear_vel,
+                self.restricted_linear_vel
             )
         else:    
             # Apply action bounds
@@ -1679,7 +1683,9 @@ class QCarRobotCALFQ(ThreeWheeledRobotCALFQ):
                          nominal_only=nominal_only, 
                          nominal_kappa_params=nominal_kappa_params, 
                          action_bounds=action_bounds,
-                         obstacle_info=[-1.5, -1.5, 0.7])
+                         obstacle_info=[-1.5, -1.5, 0.5],
+                         restricted_linear_vel=0.1,
+                         critic_struct="quad-mix")
 
 
     def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):

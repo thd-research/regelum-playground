@@ -15,13 +15,20 @@ class TrajectoryGenerator():
         """
         # self.init_state = np.array(reference).reshape(1, -1)
         self.init_state = np.array(init_state).reshape(1, -1)
+        self.trajectory_type = trajectory_type
 
+        self.generate_trajectory(init_state, trajectory_type)
+
+    def generate_trajectory(self, state, trajectory_type):
         if trajectory_type == "Sine":
-            self.trajectory = trajectory_sine_gen(*init_state[0, :2])
+            self.trajectory = trajectory_sine_gen(state[0, :2])
         elif trajectory_type == "Linear":
-            self.trajectory = trajectory_linear_gen(init_state[0])
+            self.trajectory = trajectory_linear_gen(state[0])
         else:
             raise KeyError
+
+    def regenerate_trajectory(self, state):
+        self.generate_trajectory(state, self.trajectory_type)
 
     def get_nearest_point(self, state):
         id = self.get_nearest_idx(state)

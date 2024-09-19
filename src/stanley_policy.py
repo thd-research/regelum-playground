@@ -63,10 +63,11 @@ class StanleyController(Policy):
         dx = fx - self.px    # Find the x-axis of the front axle relative to the path
         dy = fy - self.py    # Find the y-axis of the front axle relative to the path
 
-        d = np.hypot(dx, dy) # Find the distance from the front axle to the path
-        target_index = np.argmin(d) # Find the shortest distance in the array
-
-        return target_index, dx[target_index], dy[target_index], d[target_index]
+        fd = np.hypot(dx, dy) # Find the distance from the front axle to the path
+        target_index = np.argmin(fd) # Find the shortest distance in the array
+        
+        rd = np.linalg.norm([x - self.px[target_index], y - self.py[target_index]])
+        return target_index, dx[target_index], dy[target_index], fd[target_index], rd
 
     def calculate_yaw_term(self, target_index, yaw):
 
@@ -111,9 +112,16 @@ class StanleyController(Policy):
         return ReLu * target_speed + 0.1
 
     def stanley_control(self, x, y, yaw, target_velocity, steering_angle):
-        target_index, dx, dy, absolute_error = self.find_target_path_id(x, y, yaw)
+        target_index, dx, dy, front_absolute_error, rear_error = self.find_target_path_id(x, y, yaw)
+
+        if rear_error > 0.5:
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            self.trajectory_gen.regenerate_trajectory([[x, y, yaw]])
+            self.px, self.py, self.pyaw = self.trajectory_gen.trajectory
+            target_index, dx, dy, front_absolute_error, rear_error = self.find_target_path_id(x, y, yaw)
+
         yaw_error = self.calculate_yaw_term(target_index, yaw)
-        crosstrack_steering_error, crosstrack_error = self.calculate_crosstrack_term(target_velocity, yaw, dx, dy, absolute_error)
+        crosstrack_steering_error, crosstrack_error = self.calculate_crosstrack_term(target_velocity, yaw, dx, dy, front_absolute_error)
         #yaw_rate_damping = self.calculate_yaw_rate_term(target_velocity, steering_angle)
         
         desired_steering_angle = yaw_error + crosstrack_steering_error# + yaw_rate_damping
@@ -124,9 +132,11 @@ class StanleyController(Policy):
         
         # p_speed = self.p_controller(self.speed, target_velocity)
         current_speed = self.speed_computation(yaw_error, target_velocity)
+
         if self.trajectory_gen.is_last_point(target_index):
-            print("Is the last index")
-            current_speed *= absolute_error**2
+            print("Is the last index", rear_error, front_absolute_error)  
+            current_speed *= rear_error**2
+
         print(f"i: {target_index} - dx: {dx} - dy: {dy} - dyaw: {yaw_error} - cxt_error: {crosstrack_error} - limited_steering_angle: {limited_steering_angle} - current_speed: {current_speed}")
 
         current_speed = min(current_speed, self.max_abs_linear_vel)
