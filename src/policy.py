@@ -1685,7 +1685,7 @@ class QCarRobotCALFQ(ThreeWheeledRobotCALFQ):
                          action_bounds=action_bounds,
                          obstacle_info=[-1.5, -1.5, 0.5],
                          restricted_linear_vel=0.1,
-                         critic_struct="quad-mix")
+                         critic_struct="quad-nomix")
 
 
     def calf_filter(self, critic_weight_tensor, observation, action, goal_radius_disable_calf=0):
