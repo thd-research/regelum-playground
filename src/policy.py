@@ -621,6 +621,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         self.kwargs = kwargs
 
         self.restricted_linear_vel = float(self.kwargs.get("restricted_linear_vel", "0.01"))
+        self.restricted_radius = float(self.kwargs.get("restricted_radius", "0.1"))
         self.nominal_only = nominal_only
 
         # Critic
@@ -1401,7 +1402,7 @@ class ThreeWheeledRobotCALFQ(Policy):
         # /DEBUG
         dist_to_spot = np.sqrt((observation[0, 0] - self.obstacle_x)**2 + (observation[0, 1] - self.obstacle_y)**2)
 
-        if dist_to_spot <= self.obstacle_sigma:
+        if dist_to_spot <= self.restricted_radius:
             # Slow the robot down if robot is near the obstacle
             action[0, 0] = np.clip(
                 action[0, 0],
@@ -1683,8 +1684,9 @@ class QCarRobotCALFQ(ThreeWheeledRobotCALFQ):
                          nominal_only=nominal_only, 
                          nominal_kappa_params=nominal_kappa_params, 
                          action_bounds=action_bounds,
-                         obstacle_info=[-1.5, -1.5, 0.5],
+                         obstacle_info=[-1.5, -1.5, 0.2],
                          restricted_linear_vel=0.1,
+                         restricted_radius=0.5,
                          critic_struct="quad-nomix")
 
 
