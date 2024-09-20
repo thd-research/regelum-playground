@@ -123,7 +123,7 @@ class CALFHistoricalDataCallback(HistoricalDataCallback):
 class PolicyNumpyModelSaver(HistoricalCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.iteration_counter = 1
+        self._iteration_counter = 1
 
     def is_target_event(self, obj, method, output, triggers):
         return isinstance(obj, CALFScenario) and method == "reset_iteration"
@@ -132,9 +132,9 @@ class PolicyNumpyModelSaver(HistoricalCallback):
         save_model(
             self,
             numpy_array=obj.policy.critic_weight_tensor_safe,
-            iteration_counter=self.iteration_counter,
+            iteration_counter=self._iteration_counter,
         )
-        self.iteration_counter += 1
+        self._iteration_counter += 1
 
     def on_episode_done(
         self,
@@ -154,7 +154,7 @@ class PolicyNumpyModelSaver(HistoricalCallback):
 class PolicyModelSaver(HistoricalCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.iteration_counter = 1
+        self._iteration_counter = 1
 
     def is_target_event(self, obj, method, output, triggers):
         if (
@@ -168,9 +168,9 @@ class PolicyModelSaver(HistoricalCallback):
         save_nn_model(
             self,
             torch_nn_module=obj.policy.model,
-            iteration_counter=self.iteration_counter,
+            iteration_counter=self._iteration_counter,
         )
-        self.iteration_counter += 1
+        self._iteration_counter += 1
 
     def on_episode_done(
         self,
@@ -190,7 +190,7 @@ class PolicyModelSaver(HistoricalCallback):
 class CriticModelSaver(HistoricalCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.iteration_counter = 1
+        self._iteration_counter = 1
 
     def is_target_event(self, obj, method, output, triggers):
         if (
@@ -204,9 +204,9 @@ class CriticModelSaver(HistoricalCallback):
         save_nn_model(
             self,
             torch_nn_module=obj.critic.model,
-            iteration_counter=self.iteration_counter,
+            iteration_counter=self._iteration_counter,
         )
-        self.iteration_counter += 1
+        self._iteration_counter += 1
 
     def on_episode_done(
         self,
