@@ -13,6 +13,5 @@ python3.10 run.py \
             policy.critic_up_kappa_coeff=8e2 \
             policy.penalty_factor=5e2 \
             policy.step_size_multiplier=1 \
-            policy.nominal_only=false \
-            policy.weight_path="/regelum-playground/regelum_data/outputs/2024-09-20/18-02-59/0/.callbacks/PolicyNumpyModelSaver/model_it_00014.npy" \
+            policy.nominal_only=true \
             --interactive

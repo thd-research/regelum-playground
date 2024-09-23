@@ -133,26 +133,29 @@ def plot_cost_median_top_5_learning_curve(df, ax, color=None, use_interpolate=US
 
    # Plot
    if use_interpolate:
-      # # Exponential
-      # cubic_interpolation_model = interp1d(X_, 
-      #                                      Y_, 
-      #                                      kind = "cubic")
-      
-      # # Plotting the Graph
-      # X_ = np.linspace(X_.min(), X_.max(), N_SAMPLE_INTER)
-      # Y_ = cubic_interpolation_model(X_)
+      # Poly
+      degree = 12
+      coeffs = np.polyfit(X_, Y_, degree)
+      X_ = np.linspace(X_.min(), X_.max(), N_SAMPLE_INTER)
+      Y_ = np.polyval(coeffs, X_)
 
-      # ### ---------- SMOOTHEN {
-      # alpha = 0.5
+   p = ax.plot(X_, Y_, color=color, lw=2.5)
+   ax.set_xlabel("Iterations")
+   ax.set_ylabel("Accumulated Objectives")
+   return p[0]
 
-      # smoothed_data = np.zeros_like(Y_)
-      # smoothed_data[0] = Y_[0]
-      # for t in range(1, len(Y_)):
-      #    smoothed_data[t] = alpha * Y_[t] + (1 - alpha) * smoothed_data[t-1]
+def plot_cost_median_mod_learning_curve(df, ax, color=None, use_interpolate=USE_INTERPOLATE):
+   group_df = df.groupby(["experiment_path", "iteration_id"]).last()
+   median_df = group_df.groupby("iteration_id").agg({"accumulative_objective": "median"})
 
-      # Y_ = smoothed_data
-      # ### ---------- }
+   X_ = median_df.index
+   # Y_ = median_df.accumulative_objective
 
+   #### POST process
+   Y_ = get_min_acc_values(median_df.values)
+
+   # Plot
+   if use_interpolate:
       # Poly
       degree = 12
       coeffs = np.polyfit(X_, Y_, degree)

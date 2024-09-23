@@ -24,7 +24,7 @@ def correct_column_name(df):
         "steering angle [rad]": "steering angle [rad]"
     }
 
-    print("old columns:", df.columns.values)
+    # print("old columns:", df.columns.values)
     new_columns = []
     if "x [m]" not in df.columns.values:
         for col in df.columns.values:
