@@ -4,7 +4,7 @@
 # e.g. /sbin/lspci if the user is not root.
 gpu=$(lspci | grep -i '.* vga .* nvidia .*')
 
-if [[ $gpu == *' nvidia '* ]]; then
+if [[ $gpu == *' NVIDIA '* ]]; then
     docker exec -ti ros-regelum-nvi bash
 else
     printf 'Nvidia GPU is not present: %s\n' "$gpu"
