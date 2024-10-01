@@ -13,10 +13,10 @@ running_objective:
     weights: = numpy.array([100., 100., 1, 0, 0])
     quad_matrix_type: diagonal
     is_with_linear_terms: False
-  spot_gain: 100
-  spot_x_center: -0.5
-  spot_y_center: -0.5
-  spot_std: 0.1
+  spot_gain: 5e2
+  spot_x_center: -1.5
+  spot_y_center: -1.5
+  spot_std: 0.2
 
 observer:
   _target_: regelum.observer.ObserverTrivial
@@ -46,7 +46,7 @@ policy_opt_method_kwargs:
 
 policy_model:
   dim_input: 3
-  output_bounds: = np.array([[-2.2, 2.2], [-2.84, 2.84]])
+  output_bounds: = np.array([[-1.2, 1.2], [-1.7, 1.7]])
 
 critic_model:
   dim_input: 3

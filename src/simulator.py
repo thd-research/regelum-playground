@@ -206,7 +206,7 @@ class RosTurtlebot(CasADi):
             raise RuntimeError("Ros shutdowns")
 
         self.observation = self.get_observation(
-                time=self.time, state=self.new_state, inputs=self.system.inputs
+                time=self.time, state=np.array(self.new_state), inputs=np.array(self.system.inputs)
             )
         self.state = self.new_state
         pass

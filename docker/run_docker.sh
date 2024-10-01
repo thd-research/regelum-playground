@@ -4,6 +4,8 @@ xhost +local:docker || true
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
+gpu=$(lspci | grep -i '.* vga .* nvidia .*')
+
 if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
   then
     docker run --gpus all \

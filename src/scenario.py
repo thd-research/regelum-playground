@@ -563,6 +563,13 @@ class MyPPO(RLScenario, ROSMiddleScenario):
             )
         )
 
+    def compute_action_sampled(self, time, estimated_state, observation):
+        tmp_action = super().compute_action_sampled(time, estimated_state, observation)
+        if np.linalg.norm(observation[0, :2] - 
+                          np.array([[self.running_objective.spot_x_center, self.running_objective.spot_y_center]])) < 0.5:
+            tmp_action[0, 0] = 0.1
+
+        return tmp_action
     # def run_episode(self, episode_counter, iteration_counter):
     #     self.episode_counter = episode_counter
     #     self.iteration_counter = iteration_counter
