@@ -57,6 +57,7 @@ def get_df_from_datetime_range(start_datetime_str,
                                objective_function,
                                date_format='%Y-%m-%d %H-%M-%S', 
                                decay_rate=1,
+                               max_iter=100
                                ):
     start_date_time = datetime.strptime(start_datetime_str, date_format)
     end_date_time = datetime.strptime(end_datetime_str, date_format)
@@ -106,7 +107,7 @@ def get_df_from_datetime_range(start_datetime_str,
     total_df = pd.concat(total_dfs)
 
     # Post process
-    total_df = total_df[total_df.iteration_id <= 100]
+    total_df = total_df[total_df.iteration_id <= max_iter]
 
     os.makedirs("./backup-data", exist_ok=True)
     total_df.to_pickle(bk_path)
