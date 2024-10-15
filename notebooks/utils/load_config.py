@@ -23,10 +23,14 @@ def get_df_historical_data(exp_path=None, chosen_name=None, absolute_path=None):
         file_path = absolute_path
     elif exp_path is not None and chosen_name is not None:
         file_path = os.path.join(exp_path, ".callbacks/HistoricalDataCallback", f"{chosen_name}.h5")
+        if not os.path.exists(file_path):
+            file_path = file_path.replace("HistoricalDataCallback", "CALFHistoricalDataCallback")
+            if not os.path.exists(file_path):
+                raise FileNotFoundError()
     else:
         raise FileNotFoundError()
 
     return pd.read_hdf(file_path, key="data") 
 
 def get_list_historical_data(exp_path):
-    return glob(exp_path + "/*/.callbacks/HistoricalDataCallback/*.h5")
+    return glob(exp_path + "/*/.callbacks/*HistoricalDataCallback/*.h5")
