@@ -111,10 +111,17 @@ class StanleyController(Policy):
          
         return ReLu * target_speed + 0.1
 
+    def angle_to_ref(self, target_index, x_robot, y_robot, theta):
+        error_x = self.px[target_index] - x_robot
+        error_y = self.py[target_index] - y_robot
+
+        alpha = -theta + np.arctan2(error_y, error_x)
+        return alpha
+
     def stanley_control(self, x, y, yaw, target_velocity, steering_angle):
         target_index, dx, dy, front_absolute_error, rear_error = self.find_target_path_id(x, y, yaw)
 
-        if rear_error > 0.5:
+        if self.angle_to_ref(target_index, x, y, yaw) > 1.57:
             print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
             self.trajectory_gen.regenerate_trajectory([[x, y, yaw]])
             self.px, self.py, self.pyaw = self.trajectory_gen.trajectory
@@ -137,7 +144,7 @@ class StanleyController(Policy):
             print("Is the last index", rear_error, front_absolute_error)  
             current_speed *= rear_error**2
 
-        print(f"i: {target_index} - dx: {dx} - dy: {dy} - dyaw: {yaw_error} - cxt_error: {crosstrack_error} - limited_steering_angle: {limited_steering_angle} - current_speed: {current_speed}")
+        print(f"i: {target_index} - ref: [{self.px[target_index]},{self.py[target_index]},{self.pyaw[target_index]}] - dx: {dx} - dy: {dy} - dyaw: {yaw_error} - cxt_str_error:{crosstrack_steering_error} cxt_error: {crosstrack_error} - limited_steering_angle: {limited_steering_angle} - current_speed: {current_speed}")
 
         current_speed = min(current_speed, self.max_abs_linear_vel)
 
