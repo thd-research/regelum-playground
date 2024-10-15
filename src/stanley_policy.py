@@ -116,12 +116,12 @@ class StanleyController(Policy):
         error_y = self.py[target_index] - y_robot
 
         alpha = -theta + np.arctan2(error_y, error_x)
-        return alpha
+        return abs(alpha)
 
     def stanley_control(self, x, y, yaw, target_velocity, steering_angle):
         target_index, dx, dy, front_absolute_error, rear_error = self.find_target_path_id(x, y, yaw)
 
-        if self.angle_to_ref(target_index, x, y, yaw) > 1.57:
+        if self.angle_to_ref(target_index, x, y, yaw) > 0.8:
             print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
             self.trajectory_gen.regenerate_trajectory([[x, y, yaw]])
             self.px, self.py, self.pyaw = self.trajectory_gen.trajectory
