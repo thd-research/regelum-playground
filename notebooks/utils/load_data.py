@@ -52,12 +52,32 @@ def cal_obj_df(row, objective_function):
         raise err
 
 
+def is_df_valid(df):
+    old_position = None
+    old_timestamp = 0
+    for idx, data in df.iterrows():
+        position = np.array([data["x [m]"], data["y [m]"]])
+        if old_position is not None:
+            position_change = np.linalg.norm(position - old_position)
+            delta_t = data["time"] - old_timestamp
+            # print(position_change)
+            if (position_change > delta_t*df["velocity [m/s]"].abs().max()):
+                print("At", data["time"], position_change)
+                return False
+
+        old_timestamp = data["time"]
+        old_position = position
+
+    return True
+
+
 def get_df_from_datetime_range(start_datetime_str, 
                                end_datetime_str, 
                                objective_function,
                                date_format='%Y-%m-%d %H-%M-%S', 
                                decay_rate=1,
-                               max_iter=100
+                               max_iter=100,
+                               reload=False
                                ):
     start_date_time = datetime.strptime(start_datetime_str, date_format)
     end_date_time = datetime.strptime(end_datetime_str, date_format)
@@ -66,7 +86,7 @@ def get_df_from_datetime_range(start_datetime_str,
     backup_file_name = "_".join([c.replace(" ", "_") for c in ["data", start_datetime_str, end_datetime_str]]) + ".pkl"
     bk_path = os.path.join("./backup-data", backup_file_name)
 
-    if os.path.exists(bk_path):
+    if not reload and os.path.exists(bk_path):
         return pd.read_pickle(bk_path)
 
     date_folder = os.listdir(ROOT_DIR)
@@ -88,13 +108,19 @@ def get_df_from_datetime_range(start_datetime_str,
     for exp_path in path_hierachy:
         exp_dfs = []
         for iteration_path in path_hierachy[exp_path]:
-            exp_dfs.append(get_df_historical_data(absolute_path=iteration_path))
-            exp_dfs[-1]["absolute_path"] = iteration_path
-            exp_dfs[-1] = correct_column_name(exp_dfs[-1])
-            exp_dfs[-1]["objective_value"] = exp_dfs[-1].apply(lambda x: cal_obj_df(x, objective_function), axis=1)
-            # exp_dfs[-1]["accumulative_objective"] = exp_dfs[-1]["objective_value"].apply(lambda x: x*0.1).cumsum()
-            exp_dfs[-1]["accumulative_objective"] = exp_dfs[-1].apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
-        
+            tmp_df = get_df_historical_data(absolute_path=iteration_path)
+            
+            tmp_df = correct_column_name(tmp_df)
+
+            if not is_df_valid(tmp_df):
+                continue
+
+            tmp_df["absolute_path"] = iteration_path
+            tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
+            # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
+            tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
+
+            exp_dfs.append(tmp_df)
         if len(exp_dfs) == 0:
             continue
         

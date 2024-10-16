@@ -5,7 +5,7 @@ for seed in {5..20}; do
                 policy=rc_calf_qcar \
                 scenario=calf_scenario \
                 system=qcar_kin \
-                common.sampling_time=0.1 \
+                common.sampling_time=0.5 \
                 simulator.time_final=50 scenario.N_iterations=40 \
                 --jobs=-1 \
                 --experiment=calf_qcar_2009_mod_penalty \
