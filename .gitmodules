@@ -1,3 +1,0 @@
-[submodule "robot_obstacle"]
-	path = robot_obstacle
-	url = https://github.com/sanuann/DifferentialDriveRobot.git

@@ -17,6 +17,7 @@ if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
                 -v $ROOT_DIR/../regelum-playground:/regelum-playground \
                 -v $ROOT_DIR/../regelum-control:/regelum-control \
                 -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
+                -v $ROOT_DIR/gazebo_launch/multi_turtlebot3_custom.launch:/turtlebot3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/launch/multi_turtlebot3_custom.launch \
                --net=host \
                --privileged \
                --name ros-turtle-nvi ros-regelum-img
@@ -34,6 +35,7 @@ else
                 -v $ROOT_DIR/../regelum-playground:/regelum-playground \
                 -v $ROOT_DIR/../regelum-control:/regelum-control \
                 -v $ROOT_DIR/../rcognita-edu-x:/rcognita-edu \
+                -v $ROOT_DIR/gazebo_launch/multi_turtlebot3_custom.launch:/turtlebot3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/launch/multi_turtlebot3_custom.launch \
                --net=host \
                --privileged \
                --name ros-regelum ros-regelum-img
