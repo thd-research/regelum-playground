@@ -489,6 +489,84 @@ class ThreeWheeledRobotNomial(Policy):
             v = -v
         
         return np.array([[v, w]])
+    
+
+class ThreeWheeledRobotNominal2(Policy):
+    def __init__(
+        self,
+        action_bounds: list[list[float]],
+        kappa_params: list[float] = [2, 15, -1.50],
+        eps=0.01,
+        **kwargs
+    ):
+        super().__init__()
+        self.action_bounds = action_bounds
+        print("self.action_bounds:", self.action_bounds)
+        print("kappa_params:", kappa_params)
+        # An epsilon for numerical stability
+        self.eps = eps
+        self.linear_sign=None   
+        self.update_kappa(*kappa_params)
+
+    def update_kappa(self, k_rho, k_alpha, k_beta):
+        # Parameters for gazebo
+        self.k_rho = k_rho
+        self.k_alpha = k_alpha  
+        self.k_beta = k_beta
+
+    def ensure_range(self, angle, atol=1e-1):
+        if np.isclose(angle, np.pi, atol=atol):
+            return np.pi
+        
+        while angle > np.pi:
+            angle -= 2* np.pi
+
+        while angle <= -np.pi:
+            angle += 2* np.pi
+
+        return angle
+    
+    def get_action(self, observation: np.ndarray):
+        x_robot = observation[0, 0]
+        y_robot = observation[0, 1]
+        theta = observation[0, 2]
+
+        x_goal = 0
+        y_goal = 0
+        theta_goal = 0
+
+        error_x = x_goal - x_robot
+        error_y = y_goal - y_robot
+        error_theta = theta_goal - theta
+
+        if np.allclose(observation[0, :2], [0, 0], atol=0.001) and np.isclose(observation[2], 0, atol=0.05):
+            return [0, 0]
+
+        rho = np.linalg.norm([error_x, error_y])
+        alpha = self.ensure_range(error_theta + np.arctan2(error_y, error_x))
+        beta = self.ensure_range(error_theta - alpha)
+
+        
+        if self.linear_sign is None:
+            if np.abs(alpha) > np.pi/2:
+                self.linear_sign = -1
+            else:
+                self.linear_sign = 1
+
+        if self.linear_sign == -1:
+            alpha = self.ensure_range(np.pi - alpha)
+        w = self.k_alpha*alpha + self.k_beta*beta
+        w *= self.linear_sign
+
+        v = self.k_rho*rho 
+        v *= self.linear_sign
+
+        action = np.array([[v, w]])
+        action = np.clip(action, 
+                         self.action_bounds[:, 0], 
+                         self.action_bounds[:, 1])
+        return action
+  
 
 
 class ThreeWheeledRobotSimpleMPC(Policy):

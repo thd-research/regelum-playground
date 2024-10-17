@@ -27,7 +27,8 @@ class RosTurtlebot(CasADi):
                  atol: float | None = 0.00001, 
                  rtol: float | None = 0.001,
                  stop_if_reach_target: bool = False,
-                 use_phy_robot: bool=False
+                 use_phy_robot: bool=False,
+                 model_name=None
                  ):
         self.state_goal = state_goal
         self.rotation_counter = 0
@@ -37,11 +38,16 @@ class RosTurtlebot(CasADi):
         self.eps = 0.005
         self.stop_if_reach_target = stop_if_reach_target
         self.use_phy_robot = use_phy_robot
+        self.t_matrix = None
     
         # Topics
         rospy.init_node('ros_preset_node', log_level=rospy.INFO)
-        self.pub_cmd_vel = rospy.Publisher("/cmd_vel", Twist, queue_size=1, latch=False)
-        self.sub_odom = rospy.Subscriber("/odom", Odometry, self.odometry_callback)
+
+        cmd_vel_topic = "/cmd_vel" if model_name is None else f"/{model_name}/cmd_vel"
+        odom_topic = "/odom" if model_name is None else f"/{model_name}/odom"
+
+        self.pub_cmd_vel = rospy.Publisher(cmd_vel_topic, Twist, queue_size=1, latch=False)
+        self.sub_odom = rospy.Subscriber(odom_topic, Odometry, self.odometry_callback)
 
         # ROS 
         self.RATE = rospy.get_param('/rate', int(1/max_step))
@@ -226,4 +232,44 @@ class MySimulator(CasADi):
     def reset(self):
         super().reset()
 
+    
+class MultiRosTurtlebot(RosTurtlebot):
+    def __init__(self, 
+                 system, 
+                 state_goal, 
+                 state_init = None, 
+                 action_init = None, 
+                 time_final = 1, 
+                 max_step = 0.001, 
+                 first_step = 0.000001, 
+                 atol = 0.00001, 
+                 rtol = 0.001, 
+                 stop_if_reach_target = False, 
+                 use_phy_robot = False, 
+                 model_name=None,
+                 obstacle_model_names=[]):
+        super().__init__(system, state_goal, state_init, action_init, time_final, max_step, first_step, atol, rtol, stop_if_reach_target, use_phy_robot, model_name)
+
+        self.obstacle_position = dict()
+        self.obstacle_model_names = obstacle_model_names
+
+        for obs_n in obstacle_model_names:
+            odom_topic = "/odom" if model_name is None else f"/{model_name}/odom"
+            rospy.Subscriber(odom_topic, Odometry, lambda msg: self.obstacle_odometry_callback(msg, obs_n))
+
+    def obstacle_odometry_callback(self, msg, obstacle_name):
+        if self.t_matrix is None:
+            return
         
+        self.lock.acquire()
+
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        
+        # Do position transform
+        temp = np.array([x, y , 0, 1])
+        temp = np.linalg.inv(self.t_matrix) @ temp.T
+        self.obstacle_position[obstacle_name] = np.array([temp[0], temp[1]])
+
+        self.lock.release()
+    
