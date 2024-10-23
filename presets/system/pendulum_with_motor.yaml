@@ -1,4 +1,4 @@
-_target_: src.system.InvertedPendulumWithMotor
+_target_: src.system.PendulumWithMotor
 
 # To adjust system parameters, uncomment the code below
 

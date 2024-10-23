@@ -3,9 +3,9 @@ from regelum.policy import Policy
 import numpy as np
 from scipy.special import expit
 from src.system import (
-    InvertedPendulum,
-    InvertedPendulumWithFriction,
-    InvertedPendulumWithMotor,
+    Pendulum,
+    PendulumWithFriction,
+    PendulumWithMotor,
 )
 from typing import Union
 from regelum.utils import rg
@@ -13,7 +13,6 @@ from regelum import CasadiOptimizerConfig
 
 
 def soft_switch(signal1, signal2, gate, loc=np.cos(np.pi / 4), scale=10):
-
     # Soft switch coefficient
     switch_coeff = expit((gate - loc) * scale)
 
@@ -31,7 +30,7 @@ def pd_based_on_sin(observation, pd_coeffs=[20, 10]):
     return -pd_coeffs[0] * np.sin(observation[0, 0]) - pd_coeffs[1] * observation[0, 1]
 
 
-class InvPendulumPolicyPD(Policy):
+class PendulumPolicyPD(Policy):
     def __init__(self, pd_coeffs: np.ndarray, action_min: float, action_max: float):
         super().__init__()
 
@@ -48,15 +47,16 @@ class InvPendulumPolicyPD(Policy):
         return np.array([[action]])
 
 
-class InvertedPendulumEnergyBased(Policy):
+class PendulumEnergyBased(Policy):
     def __init__(
         self,
         gain: float,
         action_min: float,
         action_max: float,
         switch_loc: float,
+        switch_vel_loc: float,
         pd_coeffs: np.ndarray,
-        system: Union[InvertedPendulum, InvertedPendulumWithFriction],
+        system: Union[Pendulum, PendulumWithFriction],
     ):
         super().__init__()
         self.gain = gain
@@ -67,7 +67,6 @@ class InvertedPendulumEnergyBased(Policy):
         self.system = system
 
     def get_action(self, observation: np.ndarray) -> np.ndarray:
-
         params = self.system._parameters
         mass, grav_const, length = (
             params["mass"],
@@ -80,7 +79,7 @@ class InvertedPendulumEnergyBased(Policy):
 
         energy_total = (
             mass * grav_const * length * (np.cos(angle) - 1) / 2
-            + 1/2 * self.system.pendulum_moment_inertia() * angle_vel**2
+            + 1 / 2 * self.system.pendulum_moment_inertia() * angle_vel**2
         )
         energy_control_action = -self.gain * np.sign(angle_vel * energy_total)
 
@@ -103,8 +102,7 @@ class InvertedPendulumEnergyBased(Policy):
         )
 
 
-class InvPendulumEnergyBasedFrictionCompensation(Policy):
-
+class PendulumEnergyBasedFrictionCompensation(Policy):
     def __init__(
         self,
         gain: float,
@@ -112,7 +110,7 @@ class InvPendulumEnergyBasedFrictionCompensation(Policy):
         action_max: float,
         switch_loc: float,
         pd_coeffs: np.ndarray,
-        system: InvertedPendulumWithFriction,
+        system: PendulumWithFriction,
     ):
         super().__init__()
         self.gain = gain
@@ -123,7 +121,6 @@ class InvPendulumEnergyBasedFrictionCompensation(Policy):
         self.system = system
 
     def get_action(self, observation: np.ndarray) -> np.ndarray:
-
         params = self.system._parameters
         mass, grav_const, length, friction_coeff = (
             params["mass"],
@@ -136,7 +133,7 @@ class InvPendulumEnergyBasedFrictionCompensation(Policy):
         angle_vel = observation[0, 1]
         energy_total = (
             mass * grav_const * length * (np.cos(angle) - 1) / 2
-            + 1/2 * self.system.pendulum_moment_inertia() * angle_vel**2
+            + 1 / 2 * self.system.pendulum_moment_inertia() * angle_vel**2
         )
         energy_control_action = -self.gain * np.sign(
             angle_vel * energy_total
@@ -163,8 +160,7 @@ class InvPendulumEnergyBasedFrictionCompensation(Policy):
         )
 
 
-class InvPendulumEnergyBasedFrictionAdaptive(Policy):
-
+class PendulumEnergyBasedFrictionAdaptive(Policy):
     def __init__(
         self,
         gain: float,
@@ -174,7 +170,7 @@ class InvPendulumEnergyBasedFrictionAdaptive(Policy):
         gain_adaptive: float,
         switch_loc: float,
         pd_coeffs: list,
-        system: InvertedPendulumWithFriction,
+        system: PendulumWithFriction,
         friction_coeff_est_init: float = 0,
     ):
         super().__init__()
@@ -189,7 +185,6 @@ class InvPendulumEnergyBasedFrictionAdaptive(Policy):
         self.system = system
 
     def get_action(self, observation: np.ndarray) -> np.ndarray:
-
         params = self.system._parameters
         mass, grav_const, length = (
             params["mass"],
@@ -202,7 +197,7 @@ class InvPendulumEnergyBasedFrictionAdaptive(Policy):
 
         energy_total = (
             mass * grav_const * length * (np.cos(angle) - 1) / 2
-            + 1/2 * self.system.pendulum_moment_inertia() * angle_vel**2
+            + 1 / 2 * self.system.pendulum_moment_inertia() * angle_vel**2
         )
         energy_control_action = -self.gain * np.sign(
             angle_vel * energy_total
@@ -238,8 +233,7 @@ class InvPendulumEnergyBasedFrictionAdaptive(Policy):
         )
 
 
-class InvertedPendulumBackstepping(Policy):
-
+class PendulumBackstepping(Policy):
     def __init__(
         self,
         energy_gain: float,
@@ -248,9 +242,8 @@ class InvertedPendulumBackstepping(Policy):
         pd_coeffs: list[float],
         action_min: float,
         action_max: float,
-        system: InvertedPendulumWithMotor,
+        system: PendulumWithMotor,
     ):
-
         super().__init__()
 
         self.action_min = action_min
@@ -303,10 +296,8 @@ class InvertedPendulumBackstepping(Policy):
         )
 
 
-class InvertedPendulumWithMotorPD(Policy):
-
+class PendulumWithMotorPD(Policy):
     def __init__(self, pd_coeffs: list, action_min: float, action_max: float):
-
         super().__init__()
 
         self.action_min = action_min
@@ -323,7 +314,6 @@ class InvertedPendulumWithMotorPD(Policy):
 
 
 class ThreeWheeledRobotKinematicMinGradCLF(Policy):
-
     def __init__(
         self,
         optimizer_config: CasadiOptimizerConfig,
@@ -394,7 +384,6 @@ class ThreeWheeledRobotKinematicMinGradCLF(Policy):
 
 
 class ThreeWheeledRobotDynamicMinGradCLF(ThreeWheeledRobotKinematicMinGradCLF):
-
     def __init__(
         self,
         optimizer_config: CasadiOptimizerConfig,
@@ -413,3 +402,128 @@ class ThreeWheeledRobotDynamicMinGradCLF(ThreeWheeledRobotKinematicMinGradCLF):
         action = -self.gain * (force_and_moment - three_wheeled_robot_kin_action)
 
         return action
+
+
+class ThreeWheeledRobotStabilizingPolicy(Policy):
+    def __init__(self, K):
+        self.K = K
+
+    def get_action(self, observation):
+        x = observation[0, 0]
+        y = observation[0, 1]
+        angle = observation[0, 2]
+        angle_cond = np.arctan2(y, x)
+        if not np.allclose((x, y), (0, 0), atol=1e-03) and not np.isclose(
+            angle, angle_cond, atol=1e-03
+        ):
+            omega = (
+                -self.K
+                * np.sign(angle - angle_cond)
+                * rg.sqrt(rg.abs(angle - angle_cond))
+            )
+            v = 0
+        elif not np.allclose((x, y), (0, 0), atol=1e-03) and np.isclose(
+            angle, angle_cond, atol=1e-03
+        ):
+            omega = 0
+            v = -self.K * rg.sqrt(rg.norm_2(rg.hstack([x, y])))
+        elif np.allclose((x, y), (0, 0), atol=1e-03) and not np.isclose(
+            angle, 0, atol=1e-03
+        ):
+            omega = -self.K * np.sign(angle) * rg.sqrt(rg.abs(angle))
+            v = 0
+        else:
+            omega = 0
+            v = 0
+        return rg.force_row(rg.hstack([v, omega]))
+
+
+class LunarLanderStabilizingPolicy(Policy):
+    def __init__(self, angle_pd_coefs=[180, 120], x_pd_coefs=[10, 40]):
+        super().__init__()
+        self.observation_prev = None
+        self.action_prev = None
+        self.angle_pd_coefs = angle_pd_coefs
+        self.x_pd_coefs = x_pd_coefs
+
+    def get_action(self, obs):
+        fx = -(
+            obs[:, 2, None] * self.angle_pd_coefs[0]
+            + obs[:, 5, None] * self.angle_pd_coefs[1]
+            - np.cos(obs[:, 2, None]) ** 2
+            * (
+                obs[:, 0, None] * self.x_pd_coefs[0]
+                + obs[:, 3, None] * self.x_pd_coefs[1]
+            )
+        )
+        fy = np.zeros_like(fx)
+        action = np.hstack((fx, fy))
+        return action
+
+
+class PendulumGoalReachingFunction:
+    def __init__(self, goal_threshold: float):
+        self.goal_threshold = goal_threshold
+
+    def __call__(self, observation: np.ndarray) -> bool:
+        angle = observation[0, 0]
+        return 1 - np.cos(angle) <= self.goal_threshold
+
+
+class CartpoleStabilizingPolicy(Policy):
+    """An energy-based scenario for cartpole."""
+
+    def __init__(
+        self,
+        scenario_gain: float = 10,
+        upright_gain=None,
+        swingup_gain=10,
+        pid_loc_thr=0.35,
+        pid_scale_thr=10.0,
+        clip_bounds=(-1, 1),
+    ):
+        """Initialize an instance of ScenarioCartPoleEnergyBased.
+        Args:
+            action_bounds: upper and lower bounds for action yielded
+                from policy
+            sampling_time: time interval between two consecutive actions
+            scenario_gain: scenario gain
+            system: an instance of Cartpole system
+        """
+        super().__init__()
+        from regelum.system import CartPolePG
+
+        self.scenario_gain = scenario_gain
+        self.m_c, self.m_p, self.g, self.l = (
+            CartPolePG._parameters["m_c"],
+            CartPolePG._parameters["m_p"],
+            CartPolePG._parameters["g"],
+            CartPolePG._parameters["l"],
+        )
+        self.upright_gain = upright_gain
+        self.swingup_gain = swingup_gain
+        self.pid_loc_thr = pid_loc_thr
+        self.pid_scale_thr = pid_scale_thr
+        self.clip_bounds = clip_bounds
+
+    def get_action(self, observation):
+        observation = observation[0]
+        # sin_theta, one_minus_cos_theta, x, theta_dot, x_dot = observation
+        sin_theta, one_minus_cos_theta, theta_dot, x_dot = observation
+        x = 0
+        cos_theta = 1 - one_minus_cos_theta
+        theta = rg.atan2(sin_theta, cos_theta)
+        lbd = (1 - rg.tanh((theta - self.pid_loc_thr) * self.pid_scale_thr)) / 2
+        low, high = self.clip_bounds
+        x_clipped = rg.clip(x, low, high)
+        x_dot_clipped = rg.clip(x_dot, low, high)
+        self.upswing_gain = 3
+        if cos_theta < 0:
+            action_upswing = rg.sign(theta_dot) * self.upswing_gain
+        else:
+            action_upswing = rg.sign(sin_theta) * self.upswing_gain
+        action_upright = self.upright_gain.T @ rg.array(
+            [theta, x_clipped, theta_dot, x_dot_clipped]
+        )
+        self.action = (1 - lbd) * action_upswing + lbd * action_upright
+        return self.action.reshape(1, -1)

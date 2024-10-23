@@ -1,8 +1,9 @@
 from regelum.utils import rg
 from regelum.system import (
-    InvertedPendulum,
+    Pendulum,
     ThreeWheeledRobotKinematic,
     ThreeWheeledRobotDynamic,
+    LunarLander,
 )
 from regelum.animation import DefaultAnimation
 from .animation import (
@@ -10,7 +11,7 @@ from .animation import (
     ThreeWheeledRobotAnimationWithSpot,
 )
 from regelum.callback import detach
-
+import numpy as np
 
 # In the following two classes we want to alter their respective animation callbacks, so we:
 # - detach the default animations
@@ -45,10 +46,11 @@ class MyThreeWheeledRobotKinematic(ThreeWheeledRobotKinematic):
 class ThreeWheeledRobotKinematicWithSpot(MyThreeWheeledRobotKinematic): ...
 
 
-class InvertedPendulum(InvertedPendulum):
-    """The parameters of this system roughly resemble those of a Quanser Rotary Inverted Pendulum."""
+class Pendulum(Pendulum):
+    """The parameters of this system roughly resemble those of a Quanser Rotary Pendulum."""
 
     _parameters = {"mass": 0.127, "grav_const": 9.81, "length": 0.337}
+    _action_bounds = [[-0.1, 0.1]]
 
     def pendulum_moment_inertia(self):
         return self._parameters["mass"] * self._parameters["length"] ** 2 / 3
@@ -72,8 +74,27 @@ class InvertedPendulum(InvertedPendulum):
         return Dstate
 
 
-class InvertedPendulumWithFriction(InvertedPendulum):
-    """The parameters of this system roughly resemble those of a Quanser Rotary Inverted Pendulum."""
+class PendulumLooseBounds(Pendulum):
+    """The parameters of this system resemble those of a Quanser Rotary Pendulum, but with action bounds large enough to stabilize the system using a PD controller."""
+
+    _action_bounds = [[-0.3, 0.3]]
+
+
+class PendulumWithGymObservation(Pendulum):
+    _dim_observation = 3
+    # _parameters = {"mass": 1.0, "grav_const": 9.81, "length": 1.0}
+    # _action_bounds = [[-2, 2]]
+
+    def _get_observation(self, time, state, inputs):
+        observation = rg.zeros(self._dim_observation, prototype=state)
+        observation[0] = rg.cos(state[0])
+        observation[1] = rg.sin(state[0])
+        observation[2] = state[1]
+        return observation
+
+
+class PendulumWithFriction(Pendulum):
+    """The parameters of this system roughly resemble those of a Quanser Rotary Pendulum."""
 
     _parameters = {
         "mass": 0.127,
@@ -105,8 +126,8 @@ class InvertedPendulumWithFriction(InvertedPendulum):
         return Dstate
 
 
-class InvertedPendulumWithMotor(InvertedPendulum):
-    """The parameters of this system roughly resemble those of a Quanser Rotary Inverted Pendulum."""
+class PendulumWithMotor(Pendulum):
+    """The parameters of this system roughly resemble those of a Quanser Rotary Pendulum."""
 
     _parameters = {
         "mass": 0.127,
@@ -153,3 +174,12 @@ class InvertedPendulumWithMotor(InvertedPendulum):
         Dstate[2] = (inputs[0] - state[2]) / motor_time_const
 
         return Dstate
+
+
+class LunarLanderWithOffset(LunarLander):
+    def _get_observation(self, time, state, inputs):
+        return state - rg.array(
+            np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0]).reshape(*state.shape),
+            prototype=state,
+            _force_numeric=True,
+        )
