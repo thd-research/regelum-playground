@@ -64,10 +64,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgles2 libgles2:i386 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --ignore-installed regelum-control==0.3.2
+COPY ../requirements.txt /requirements.txt
+RUN python3 -m pip install --force-reinstall -r /requirements.txt
 
-COPY ../dev-requirements.txt /requirements.txt
-RUN python3 -m pip install -r /requirements.txt
+COPY ../dev-requirements.txt /dev-requirements.txt
+RUN python3 -m pip install -r /dev-requirements.txt
 
 RUN git config --global --add safe.directory /regelum-playground
 RUN echo "source /regelum-playground/setup.sh" >> ~/.bashrc

@@ -2,7 +2,7 @@ _target_: src.scenario.sac.SACScenario
 
 simulator: ~ simulator
 running_objective: ~ running_objective
-device: "cuda:0"
+device: "cpu"
 total_timesteps: 1000000
 buffer_size: 1000000
 gamma: 0.99
