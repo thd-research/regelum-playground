@@ -230,12 +230,26 @@ class PushingObject(RgEnv):
                          action_space, 
                          observation_space)
         tasks = {}
-        tasks['red'] = Task('red',[Task.Transform(position=[0.4,0.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,0.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=20)
-        tasks['green'] = Task('green',[Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=20)
-        tasks['blue'] = Task('blue',[Task.Transform(position=[0.4,8.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,8.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=0)
-        tasks['yellow'] = Task('yellow',[Task.Transform(position=[0.4,-4.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,-4.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=0)
-        tasks['pink'] = Task('pink',[Task.Transform(position=[0.4,-8.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,-8.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=0)
-        tasks['cyan'] = Task('cyan',[Task.Transform(position=[0.4,-12.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,-12.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=20)
+        tasks['red'] = Task('red',[Task.Transform(position=[0.4,0.0,0.05],
+                                                  euler_rotation=[0.0,0.0,15.0]),
+                                   Task.Transform(position=[0.4,0.0,0.05],
+                                                  euler_rotation=[0.0,0.0,-15.0])],
+                            mass=20)
+        tasks['green'] = Task('green',[Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,15.0]),
+                                       Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,-15.0])],
+                              mass=20)
+        tasks['blue'] = Task('blue',[Task.Transform(position=[0.4,8.0,0.05],euler_rotation=[0.0,0.0,15.0]),
+                                     Task.Transform(position=[0.4,8.0,0.05],euler_rotation=[0.0,0.0,-15.0])],
+                              mass=0)
+        tasks['yellow'] = Task('yellow',[Task.Transform(position=[0.4,-4.0,0.05],euler_rotation=[0.0,0.0,15.0]),
+                                         Task.Transform(position=[0.4,-4.0,0.05],euler_rotation=[0.0,0.0,-15.0])],
+                               mass=0)
+        tasks['pink'] = Task('pink',[Task.Transform(position=[0.4,-8.0,0.05],euler_rotation=[0.0,0.0,15.0]),
+                                     Task.Transform(position=[0.4,-8.0,0.05],euler_rotation=[0.0,0.0,-15.0])],
+                             mass=0)
+        tasks['cyan'] = Task('cyan',[Task.Transform(position=[0.4,-12.0,0.05],euler_rotation=[0.0,0.0,15.0]),
+                                     Task.Transform(position=[0.4,-12.0,0.05],euler_rotation=[0.0,0.0,-15.0])],
+                             mass=20)
 
         env_config = EnvironmentConfig(observation_shape=[20,20,3], # simulator.system.dim_observation
                                        tasks=tasks,
