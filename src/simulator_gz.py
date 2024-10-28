@@ -52,13 +52,15 @@ class Robot3Pi(Simulator):
 
         # stop and wait until robot has stopped
         self.manager.trigger_pause(False)
-        self.manager.gz_perform_action_stop()
-        time.sleep(0.2)
-        response = self.manager.get_data()
-        # re-place robot
-        self.manager.perform_reset(self.starting_transform.position, self.starting_transform.orientation) ;
-        time.sleep(0.5)
-        self.manager.trigger_pause(True)
+        try:
+            self.manager.gz_perform_action_stop()
+            time.sleep(0.2)
+            response = self.manager.get_data()
+            # re-place robot
+            self.manager.perform_reset(self.starting_transform.position, self.starting_transform.orientation) ;
+            time.sleep(0.5)
+        finally:
+            self.manager.trigger_pause(True)
 
         response = self.manager.get_data()
         # print("response:", response)
@@ -97,10 +99,11 @@ class Robot3Pi(Simulator):
         #     raise RuntimeError("Ros shutdowns")
 
         self.manager.trigger_pause(False)
-        self.publish_action(self.system.inputs)
-
-        response = self.get_observation_response()
-        self.manager.trigger_pause(True)
+        try:
+            self.publish_action(self.system.inputs)
+            response = self.get_observation_response()
+        finally:
+            self.manager.trigger_pause(True)
 
         state = self.manager.convert_image_msg(response)
         self.observation = self.state = state[::4,::4,:]
