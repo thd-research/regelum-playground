@@ -8,4 +8,5 @@ CUDA_VISIBLE_DEVICES="" python3 run.py \
     scenario.alpha=0.0085 \
     +seed=4 \
     --interactive \
+    --experiment=sac_pendulum \
     --fps=10

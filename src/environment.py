@@ -14,6 +14,7 @@ from gz.msgs10.boolean_pb2 import Boolean ;
 from gz.msgs10.pose_pb2 import Pose ;
 from gz.msgs10.pose_v_pb2 import Pose_V ;
 import time
+import traceback
 
 
 class Task():
@@ -254,7 +255,6 @@ class PushingObject(RgEnv):
             self.simulator.system.apply_action_bounds(action.reshape(1, -1))
         )
 
-        print("self.running_objective:", self.running_objective)
         costs, truncated, terminated = self.running_objective(self._get_obs(), 
                                                               self._get_pos(), 
                                                               action.reshape(-1))
@@ -293,7 +293,7 @@ class PushingObject(RgEnv):
     
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super(RgEnv, self).reset(seed=seed)
-
+        
         current_task = self.tasks[self.task_id]
         self.current_name = current_task.task_name
         self.current_mass = current_task.get('mass')

@@ -24,3 +24,7 @@ class PushingObjectSACScenario(SACScenario):
     def run(self):
         self.envs.envs[0].env.switch_task(0)
         return super().run()
+    
+    def reset_episode(self):
+        
+        return super().reset_episode()

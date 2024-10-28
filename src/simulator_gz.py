@@ -97,7 +97,6 @@ class Robot3Pi(Simulator):
         #     raise RuntimeError("Ros shutdowns")
 
         self.manager.trigger_pause(False)
-        print("self.system.inputs:", self.system.inputs)
         self.publish_action(self.system.inputs)
 
         response = self.get_observation_response()
