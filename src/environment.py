@@ -257,7 +257,8 @@ class PushingObject(RgEnv):
 
         costs, truncated, terminated = self.running_objective(self._get_obs(), 
                                                               self._get_pos(), 
-                                                              action.reshape(-1))
+                                                              action.reshape(-1),
+                                                              self.current_mass)
         sim_step = self.simulator.do_sim_step()
         self.state = np.copy(self.simulator.state).reshape(-1)
         return self._get_obs().reshape(-1), -costs, truncated, sim_step is not None or terminated, {}

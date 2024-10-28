@@ -80,7 +80,7 @@ class GymPendulumRunningObjective:
             raise ValueError("Invalid observation shape")
 
 class PushingObjectRunningObjective:
-    def __call__(self, state, position, action):
+    def __call__(self, state, position, action, current_mass):
         if not hasattr(self, "x"):
             # for reward computation
             c2 = state.shape[0]
@@ -117,7 +117,7 @@ class PushingObjectRunningObjective:
         # # x coord of the robot (closeness to the cube) 0.9 ) collision with cube
         if position[0] >= 0.85 and reward > 0.6: # x coord of the robot (closeness to the cube) 0.9 ) collision with cube
             truncated = True
-            if self.current_mass > 1: # we mean > 0 but safer this way
+            if current_mass > 1: # we mean > 0 but safer this way
                 reward = -10
             else:
                 reward = 10
