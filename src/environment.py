@@ -255,13 +255,13 @@ class PushingObject(RgEnv):
             self.simulator.system.apply_action_bounds(action.reshape(1, -1))
         )
 
-        costs, truncated, terminated = self.running_objective(self._get_obs(), 
+        reward, truncated, terminated = self.running_objective(self._get_obs(), 
                                                               self._get_pos(), 
                                                               action.reshape(-1),
                                                               self.current_mass)
         sim_step = self.simulator.do_sim_step()
         self.state = np.copy(self.simulator.state).reshape(-1)
-        return self._get_obs().reshape(-1), -costs, truncated, sim_step is not None or terminated, {}
+        return self._get_obs().reshape(-1), reward, truncated, sim_step is not None or terminated, {}
 
     def get_current_status(self):
         obj_name = self.info['object'][0]
