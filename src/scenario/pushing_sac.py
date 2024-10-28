@@ -22,8 +22,11 @@ class PushingObjectSACScenario(SACScenario):
                          PushingObject)
 
     def run(self):
-        self.envs.envs[0].env.switch_task(0)
-        return super().run()
+        for id, task_color in enumerate(self.envs.envs[0].env.task_list):
+            print("Pushing it:", task_color)
+            self.envs.envs[0].env.switch_task(id)
+            super().run()
+        
     
     def reset_episode(self):
         

@@ -221,7 +221,7 @@ class PushingObject(RgEnv):
                  running_objective, 
                  action_space = None, 
                  observation_space = None,
-                 task_list = ['red']):
+                 task_list = ["red" ,"red" ,"blue" ,"green" ,"yellow" ,"yellow"]):
         print("simulator:", simulator)
         assert hasattr(simulator, "set_manager")
 
