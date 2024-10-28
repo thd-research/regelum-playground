@@ -40,9 +40,6 @@ class Robot3Pi(Simulator):
     # Override this reset
     def reset(self, current_task:Task):
         self.time = 0.0
-        self.state = self.state_init
-        self.observation = self.observation_init
-        self.observation = self.get_observation()
 
         self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.episode_start = None
@@ -54,22 +51,23 @@ class Robot3Pi(Simulator):
         self.starting_transform = current_task.get_random_start()
 
         # stop and wait until robot has stopped
+        self.manager.trigger_pause(False)
         self.manager.gz_perform_action_stop()
         time.sleep(0.2)
         response = self.manager.get_data()
         # re-place robot
         self.manager.perform_reset(self.starting_transform.position, self.starting_transform.orientation) ;
         time.sleep(0.5)
+        self.manager.trigger_pause(True)
+
         response = self.manager.get_data()
         # print("response:", response)
         state = self.manager.convert_image_msg(response)
-        self.state = state[::4,::4,:].flatten()
+        self.state = state[::4,::4,:]
+        self.observation = self.get_observation()
 
     # Publish action to gazebo
     def publish_action(self, action):
-        if not hasattr(self, "is_time_for_new_sample") or not self.is_time_for_new_sample:
-            return
-        
         try:
             self.manager.gz_perform_action(TwistAction("go", action[0]))
         except Exception as err:
@@ -91,23 +89,46 @@ class Robot3Pi(Simulator):
         Return: -1: episode ended
                 otherwise: episode continues
         '''        
-        self.update_time()
-
         if self.time >= self.time_final:
-            return -1
+            return None
         
         # if rospy.is_shutdown():
         #     raise RuntimeError("Ros shutdowns")
 
-        response = self.manager.get_data()
+        self.manager.trigger_pause(False)
+        print("self.system.inputs:", self.system.inputs)
+        self.publish_action(self.system.inputs)
+
+        response = self.get_observation_response()
+        self.manager.trigger_pause(True)
+
         state = self.manager.convert_image_msg(response)
         self.observation = self.state = state[::4,::4,:]
 
-        self.publish_action(self.system.inputs)
+        self.update_time()
+
+    def get_observation_response(self, nsec=0.15):
+        if nsec is None:
+            nsec = self.step_duration_nsec
+        t0 = self.manager.get_last_obs_time()
+        i = 0
+        last = t0
+        while ((self.manager.get_last_obs_time() - t0) < nsec):
+            time.sleep(0.001)
+            if self.manager.get_last_obs_time() != last: 
+              last = self.manager.get_last_obs_time()
+            i += 1
+
+            if i > int(nsec/0.001):
+                print(f"Counter overflow with t0: {t0} and last moment: {last}")
+                break
+            pass
+        response = self.manager.get_data()
+        return response
 
     def get_observation(self, **kwargs):
-        if not hasattr(self, "observation"):
-            self.observation = self.state
+        # if not hasattr(self, "observation"):
+        self.observation = self.state
             # response = self.manager.get_data()
             # self.observation = self.manager.convert_image_msg(response)
         

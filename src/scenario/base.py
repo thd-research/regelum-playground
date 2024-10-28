@@ -38,6 +38,7 @@ class CleanRLScenario(Scenario):
         running_objective: RunningObjective,
         total_timesteps: int,
         device: str,
+        env: RgEnv=RgEnv,
     ):
         """Initialize the CleanRLScenario.
 
@@ -67,7 +68,7 @@ class CleanRLScenario(Scenario):
             return thunk
 
         self.envs = gym.vector.SyncVectorEnv(
-            [make_env(RgEnv(simulator, running_objective))]
+            [make_env(env(simulator, running_objective))]
         )
 
         self.N_iterations = int(

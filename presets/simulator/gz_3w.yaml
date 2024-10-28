@@ -1,0 +1,5 @@
+_target_: src.simulator_gz.Robot3Pi
+
+system: ~ system
+time_final: $ common.time_final
+state_init: = np.zeros([20*20*3])

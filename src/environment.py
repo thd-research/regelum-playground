@@ -119,6 +119,10 @@ class EnvironmentManager(Node):
         response = self.request_scene()
         for m in response.model:
           print("Model in scene", m.name) ;
+    
+        while not hasattr(self, "data") or not hasattr(self, "position"):
+            time.sleep(0.005)
+        print('\nObservation and position received!')
 
     def request_scene(self):
         result = False;
@@ -217,9 +221,13 @@ class PushingObject(RgEnv):
                  action_space = None, 
                  observation_space = None,
                  task_list = ['red']):
+        print("simulator:", simulator)
         assert hasattr(simulator, "set_manager")
 
-        super().__init__(simulator, running_objective, action_space, observation_space)
+        super().__init__(simulator, 
+                         running_objective, 
+                         action_space, 
+                         observation_space)
         tasks = {}
         tasks['red'] = Task('red',[Task.Transform(position=[0.4,0.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,0.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=20)
         tasks['green'] = Task('green',[Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,15.0]),Task.Transform(position=[0.4,4.0,0.05],euler_rotation=[0.0,0.0,-15.0])],mass=20)
@@ -241,6 +249,17 @@ class PushingObject(RgEnv):
         simulator.set_manager(env_config)
         time.sleep(0.01)
 
+    def step(self, action):
+        self.simulator.receive_action(
+            self.simulator.system.apply_action_bounds(action.reshape(1, -1))
+        )
+        costs, truncated, terminated = self.running_objective(self._get_obs(), 
+                                                              self._get_pos(), 
+                                                              action.reshape(-1))
+        sim_step = self.simulator.do_sim_step()
+        self.state = np.copy(self.simulator.state).reshape(-1)
+        return self._get_obs().reshape(1, -1), -costs, truncated, sim_step is not None or terminated, {}
+
     def get_current_status(self):
         obj_name = self.info['object'][0]
         return (self.info['object'][1], self.OBJ_ID_LOOKUP[obj_name])
@@ -250,6 +269,25 @@ class PushingObject(RgEnv):
 
     def _get_obs(self):
         return self.simulator.observation
+    
+    def _get_pos(self):
+        return np.array(self.simulator.manager.position)
+    
+    def _get_distance_to_object(self):
+        object_positions = {
+            'red':    [0.9,   0.0, 0.05],
+            'green':  [0.9,   4.0, 0.05],
+            'blue':   [0.9,   8.0, 0.05],
+            'yellow': [0.9,  -4.0, 0.05],
+            'pink':   [0.9,  -8.0, 0.05],
+            'cyan':   [0.9, -12.0, 0.05],
+        }
+
+        robot_pos = self._get_pos()[:2]
+        object_pos = np.array(object_positions[self.task_id][:2])
+        dis = np.linalg.norm(robot_pos - object_pos)
+        return dis
+
     
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super(RgEnv, self).reset(seed=seed)

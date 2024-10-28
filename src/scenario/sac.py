@@ -134,6 +134,7 @@ class SACScenario(CleanRLScenario):
         target_network_frequency: int = 1,
         alpha: float = 0.2,
         autotune: bool = True,
+        env: RgEnv = RgEnv,
     ):
         """
         Initializes the Soft Actor-Critic (SAC) scenario.
@@ -160,6 +161,7 @@ class SACScenario(CleanRLScenario):
             running_objective=running_objective,
             total_timesteps=total_timesteps,
             device=device,
+            env=env,
         )
         self.buffer_size = buffer_size
         self.gamma = gamma
