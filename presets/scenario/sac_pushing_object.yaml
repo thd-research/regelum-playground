@@ -1,7 +1,7 @@
 _target_: src.scenario.pushing_sac.PushingObjectSACScenario
 
 simulator: ~ simulator
-running_objective: 3wrobot_pushing_object
+running_objective: ~ running_objective
 device: "cpu"
 total_timesteps: 1000000
 buffer_size: 1000000

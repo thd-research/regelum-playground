@@ -72,6 +72,7 @@ class Robot3Pi(Simulator):
             self.manager.gz_perform_action(TwistAction("go", action[0]))
         except Exception as err:
             print("publish_action got Error:", err)
+            print("action:", action)
 
     def update_time(self):
         current_time = self.manager.get_last_obs_time()
