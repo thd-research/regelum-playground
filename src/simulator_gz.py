@@ -95,7 +95,7 @@ class Robot3Pi(Simulator):
         # print("[do_sim_step] time:", self.time)
         self.update_time()
         if self.time >= self.time_final:
-            return None
+            return -1
         
         # if rospy.is_shutdown():
         #     raise RuntimeError("Ros shutdowns")
