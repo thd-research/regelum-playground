@@ -221,7 +221,7 @@ class PushingObject(RgEnv):
                  running_objective, 
                  action_space = None, 
                  observation_space = None,
-                 task_list = ["red" ,"red" ,"blue" ,"green" ,"yellow" ,"yellow"]):
+                 task_list = ["red" ,"blue" ,"green" ,"yellow"]):
         print("simulator:", simulator)
         assert hasattr(simulator, "set_manager")
 
@@ -257,7 +257,8 @@ class PushingObject(RgEnv):
                                        robot_name='3pi_front_cam_robot',
                                        vehicle_prefix='/vehicle',
                                        world_name='/world/pushing_objects_world',
-                                       camera_topic='/vehicle/camera')
+                                       camera_topic='/vehicle/camera',
+                                       debug="yes")
         self.task_list = task_list
         self.tasks = tasks
         self.info = dict()

@@ -91,7 +91,8 @@ class Robot3Pi(Simulator):
         '''
         Return: -1: episode ended
                 otherwise: episode continues
-        '''        
+        '''     
+        print("[do_sim_step] time:", self.time)   
         if self.time >= self.time_final:
             return None
         
