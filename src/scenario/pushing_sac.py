@@ -1,6 +1,10 @@
 from src.scenario.sac import SACScenario
 from src.environment import PushingObject
 
+from pathlib import Path
+import torch
+import os
+
 
 class PushingObjectSACScenario(SACScenario):
     def __init__(self, simulator, 
@@ -19,6 +23,7 @@ class PushingObjectSACScenario(SACScenario):
                  alpha = 0.2, 
                  autotune = True, 
                  reset_rb_each_task = False,
+                 checkpoint_dirpath = None,
                  env = ...):
         
         super().__init__(simulator, 
@@ -39,7 +44,12 @@ class PushingObjectSACScenario(SACScenario):
                          PushingObject)
         self.reset_rb_each_task = reset_rb_each_task
 
+        if checkpoint_dirpath is not None:
+            self.checkpoint_dirpath = checkpoint_dirpath
+
     def run(self):
+        if hasattr(self, "checkpoint_dirpath"):
+            self.load_checkpoint(self.checkpoint_dirpath)
         
         for id, task_color in enumerate(self.envs.envs[0].env.task_list):
             print("Pushing it:", task_color)
@@ -50,7 +60,40 @@ class PushingObjectSACScenario(SACScenario):
 
             self.envs.envs[0].env.switch_task(id)
             super().run()
+
+        self.save_checkpoint()
     
-    def reset_episode(self):
-        
-        return super().reset_episode()
+    def load_checkpoint(self, experiment_path):
+        load_nn_model(self.actor, "actor", experiment_path)
+        load_nn_model(self.qf1, "qf1", experiment_path)
+        load_nn_model(self.qf2, "qf2", experiment_path)
+        load_nn_model(self.qf1_target, "qf1_target", experiment_path)
+        load_nn_model(self.qf2_target, "qf2_target", experiment_path)
+
+
+    def save_checkpoint(self):
+        save_nn_model(self.actor, "actor")
+        save_nn_model(self.qf1, "qf1")
+        save_nn_model(self.qf2, "qf2")
+        save_nn_model(self.qf1_target, "qf1_target")
+        save_nn_model(self.qf2_target, "qf2_target")
+
+
+def save_nn_model(
+    torch_nn_module: torch.nn.Module,
+    name: str,
+) -> None:
+    os.makedirs(".checkpoint", exist_ok=True)
+    torch.save(
+        torch_nn_module.state_dict(),
+        Path(".checkpoint")
+        / name,
+    )
+
+def load_nn_model(
+    torch_nn_module: torch.nn.Module,
+    name: str,
+    experiment_path: str
+) -> None:
+    checkpoint_path = Path(experiment_path) / ".checkpoint" / name
+    torch_nn_module.load_state_dict(torch.load(checkpoint_path))

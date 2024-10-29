@@ -356,5 +356,7 @@ class SACScenario(CleanRLScenario):
                             global_step=global_step,
                             alpha_loss=alpha_loss.item(),
                         )
+        
+                # Save model weight
         self.envs.close()
         print("Env closed")
