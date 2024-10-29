@@ -92,7 +92,8 @@ class Robot3Pi(Simulator):
         Return: -1: episode ended
                 otherwise: episode continues
         '''     
-        print("[do_sim_step] time:", self.time)   
+        # print("[do_sim_step] time:", self.time)
+        self.update_time()
         if self.time >= self.time_final:
             return None
         
@@ -108,8 +109,6 @@ class Robot3Pi(Simulator):
 
         state = self.manager.convert_image_msg(response)
         self.observation = self.state = state[::4,::4,:]
-
-        self.update_time()
 
     def get_observation_response(self, nsec=0.15):
         if nsec is None:
