@@ -1,8 +1,25 @@
 from src.scenario.sac import SACScenario
 from src.environment import PushingObject
 
+
 class PushingObjectSACScenario(SACScenario):
-    def __init__(self, simulator, running_objective, device = "cuda:0", total_timesteps = 1000000, buffer_size = 1000000, gamma = 0.99, tau = 0.005, batch_size = 256, learning_starts = 5000, policy_lr = 0.0003, q_lr = 0.001, policy_frequency = 2, target_network_frequency = 1, alpha = 0.2, autotune = True, env = ...):
+    def __init__(self, simulator, 
+                 running_objective, 
+                 device = "cuda:0", 
+                 total_timesteps = 1000000, 
+                 buffer_size = 1000000, 
+                 gamma = 0.99, 
+                 tau = 0.005, 
+                 batch_size = 256, 
+                 learning_starts = 5000, 
+                 policy_lr = 0.0003, 
+                 q_lr = 0.001, 
+                 policy_frequency = 2, 
+                 target_network_frequency = 1, 
+                 alpha = 0.2, 
+                 autotune = True, 
+                 reset_rb_each_task = False,
+                 env = ...):
         
         super().__init__(simulator, 
                          running_objective, 
@@ -20,13 +37,19 @@ class PushingObjectSACScenario(SACScenario):
                          alpha, 
                          autotune, 
                          PushingObject)
+        self.reset_rb_each_task = reset_rb_each_task
 
     def run(self):
+        
         for id, task_color in enumerate(self.envs.envs[0].env.task_list):
             print("Pushing it:", task_color)
+
+            # reset replay buffer
+            if self.reset_rb_each_task:
+                self.rb.reset()
+
             self.envs.envs[0].env.switch_task(id)
             super().run()
-        
     
     def reset_episode(self):
         

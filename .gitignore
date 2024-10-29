@@ -135,3 +135,6 @@ dmypy.json
 
 # rcognita
 simdata
+
+# media
+*.mp4

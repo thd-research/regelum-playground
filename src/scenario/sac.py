@@ -216,8 +216,8 @@ class SACScenario(CleanRLScenario):
             self.alpha = alpha
 
     def run(self):
-        start_debug = False
-        print("Run here")
+        start_debug = True
+
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
             # ALGO LOGIC: put action logic here
@@ -250,9 +250,7 @@ class SACScenario(CleanRLScenario):
                 global_step,
             )
             if "final_info" in infos:
-                for info in infos["final_info"]:
-                    print("Run here 1")
-                    start_debug = True
+                for info in infos["final_info"]:                    
                     self.save_episodic_return(
                         global_step=global_step, episodic_return=self.value
                     )
@@ -262,7 +260,7 @@ class SACScenario(CleanRLScenario):
                     break
             
             if start_debug:
-                print("sai hi:", global_step)
+                print(f"global step: {global_step}, buffer size: {self.rb.size()}")
 
             # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
             real_next_obs = next_obs.copy()
@@ -272,9 +270,6 @@ class SACScenario(CleanRLScenario):
             self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
-
-            if start_debug:
-                print("global_step:", global_step)
 
             # ALGO LOGIC: training.
             if global_step > self.learning_starts:
