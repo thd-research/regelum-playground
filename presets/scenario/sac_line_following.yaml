@@ -1,4 +1,4 @@
-_target_: src.scenario.gz_experiments.PushingObjectSACScenario
+_target_: src.scenario.gz_experiments.LineFollowingSACScenario
 
 simulator: ~ simulator
 running_objective: ~ running_objective

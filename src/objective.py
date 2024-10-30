@@ -107,11 +107,6 @@ class PushingObjectRunningObjective:
             truncated = True
             print("COND: LOST")
             return -1.0, truncated, terminated
-        
-        # if self.step_count >= self.max_steps_per_episode:
-        #     terminated = True
-        #     print("COND: MAX STEPS REACHED")
-        #     return reward, truncated, terminated
 
         #if position[0] >= 0.85 and math.fabs(position[1]-cube_pos) < 0.15 and reward > 0.5: 
         # # x coord of the robot (closeness to the cube) 0.9 ) collision with cube
@@ -134,3 +129,24 @@ class PushingObjectRunningObjective:
         modifier = 0.1 if all(np.isclose(action, np.zeros_like(action))) else 1.0 ; # punish stop action
         
         return reward * modifier, truncated, terminated
+    
+class LineFollowingRunningObjective:
+    def __call__(self, observation):
+        truncated = False
+
+        gray_img = observation.mean(axis=2) ;
+        c = observation.shape[1] ;
+        black_mask = (gray_img[0,:] < 0.1) ;
+
+        if black_mask.astype(np.int32).sum() < 1: # no black pixels visible
+          terminated = True
+          return -1., truncated, terminated
+
+        x_indices = np.linspace(0.,c,c) ;
+        black_indices = x_indices[black_mask] ;
+        left_line_index = np.min(black_indices) ;
+        
+        ret = 1.- math.fabs(left_line_index-c//2) / (c//2) ;
+
+        terminated = ret < 0.
+        return ret, truncated, terminated

@@ -319,3 +319,80 @@ class PushingObject(RgEnv):
         self.simulator.reset(current_task)
         self.state = np.copy(self.simulator.state).reshape(-1)
         return self._get_obs().reshape(-1), {}
+
+
+class LineFollowing(RgEnv):
+    OBJ_ID_LOOKUP = {"red":0, "green":1, "blue":2, "yellow":3, "pink":4, "cyan":5}
+
+    def __init__(self, simulator, 
+                 running_objective, 
+                 action_space = None, 
+                 observation_space = None,
+                 task_list = ["circle_red" ,"circle_green" ,"circle_blue" ,"circle_yellow"]):
+        
+        print("simulator:", simulator)
+        assert hasattr(simulator, "set_manager")
+
+        super().__init__(simulator, 
+                         running_objective, 
+                         action_space, 
+                         observation_space)
+        tasks = {}
+        tasks['circle_red'] = Task('circle_red',[Task.Transform(position=[-40.0,0.0,0.05],euler_rotation=[0.0,0.0,25.0]),
+                                                 Task.Transform(position=[-40.0,0.0,0.05],euler_rotation=[0.0,0.0,-25.0])])
+        tasks['circle_green'] = Task('circle_green',[Task.Transform(position=[-20.0,0.0,0.05],euler_rotation=[0.0,0.0,25.0]),
+                                                     Task.Transform(position=[-20.0,0.0,0.05],euler_rotation=[0.0,0.0,-25.0])])
+        tasks['circle_blue'] =  Task('circle_blue',[Task.Transform(position=[0.0,0.0,0.05],euler_rotation=[0.0,0.0,25.0]),
+                                                    Task.Transform(position=[0.0,0.0,0.05],euler_rotation=[0.0,0.0,-25.0])])
+        tasks['circle_yellow'] =Task('circle_yellow',[Task.Transform(position=[20.0,0.0,0.05],euler_rotation=[0.0,0.0,25.0]),
+                                                      Task.Transform(position=[20.0,0.0,0.05],euler_rotation=[0.0,0.0,-25.0])])
+        tasks['circle_white'] = Task('circle_white',[Task.Transform(position=[40.0,0.0,0.05],euler_rotation=[0.0,0.0,25.0]),
+                                                     Task.Transform(position=[40.0,0.0,0.05],euler_rotation=[0.0,0.0,-25.0])])
+
+
+        env_config = EnvironmentConfig(observation_shape=[3*2, 50, 3], # simulator.system.dim_observation
+                                       tasks=tasks,
+                                       actions=self.action_space,
+                                       robot_name='3pi_robot',
+                                       vehicle_prefix='/vehicle',
+                                       world_name='/world/race_tracks_world',
+                                       camera_topic='/vehicle/camera')
+        self.task_list = task_list
+        self.tasks = tasks
+        self.info = dict()
+        simulator.set_manager(env_config)
+        time.sleep(0.01)
+
+    def step(self, action):
+        self.simulator.receive_action(
+            self.simulator.system.apply_action_bounds(action.reshape(1, -1))
+        )
+
+        reward, truncated, terminated = self.running_objective(self._get_state())
+        sim_step = self.simulator.do_sim_step()
+        self.state = np.copy(self.simulator.state).reshape(-1)
+        return self._get_obs().reshape(-1), reward, truncated, sim_step is not None or terminated, {}
+
+    def get_current_status(self):
+        return (self.info['track'],)
+    
+    def switch_task(self, task_index):
+        self.task_id = self.task_list[task_index]
+    
+    def _get_state(self):
+        return self.simulator.state
+    
+    def _get_obs(self):
+        return self.simulator.observation
+    
+    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+        super(RgEnv, self).reset(seed=seed)
+        
+        current_task = self.tasks[self.task_id]
+        self.current_name = current_task.task_name
+        self.starting_transform = current_task.get_random_start()
+        self.info['track'] = self.current_name
+
+        self.simulator.reset(current_task)
+        self.state = np.copy(self.simulator.state).reshape(-1)
+        return self._get_obs().reshape(-1), {}

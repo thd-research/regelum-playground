@@ -29,6 +29,7 @@ class Robot3Pi(Simulator):
         #                                world_name='/world/pushing_objects_world',
         #                                camera_topic='/vehicle/camera')
         # self.set_manager(env_config)
+        self.step_count = 0
 
         super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
         self._action = np.expand_dims(self.initialize_init_action(), axis=0)
@@ -40,6 +41,7 @@ class Robot3Pi(Simulator):
     # Override this reset
     def reset(self, current_task:Task):
         self.time = 0.0
+        self.step_count = 0
 
         self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.episode_start = None
@@ -65,7 +67,7 @@ class Robot3Pi(Simulator):
         response = self.manager.get_data()
         # print("response:", response)
         state = self.manager.convert_image_msg(response)
-        self.state = state[::4,::4,:]
+        self.state = self.preprocess(state)
         self.observation = self.get_observation()
 
     # Publish action to gazebo
@@ -94,6 +96,8 @@ class Robot3Pi(Simulator):
         '''     
         # print("[do_sim_step] time:", self.time)
         self.update_time()
+        self.step_count += 1
+
         if self.time >= self.time_final:
             return -1
         
@@ -108,7 +112,10 @@ class Robot3Pi(Simulator):
             self.manager.trigger_pause(True)
 
         state = self.manager.convert_image_msg(response)
-        self.observation = self.state = state[::4,::4,:]
+        self.state = self.preprocess(state)
+
+    def preprocess(self, image):
+        return image[::4,::4,:]
 
     def get_observation_response(self, nsec=0.15):
         if nsec is None:
@@ -136,3 +143,21 @@ class Robot3Pi(Simulator):
             # self.observation = self.manager.convert_image_msg(response)
         
         return self.observation
+
+
+class Robot3PiLineFollowing(Robot3Pi):
+    def preprocess(self, image):
+        return image[1:3,::2,:]
+    
+    def glue_images(self, img):
+        if self.step_count == 0:
+          self.img0 = self.img1 = img ;
+        elif self.step_count == 1:
+          self.img0 = self.img1 ;
+          self.img1 = img ;
+        ret = np.concatenate([self.img0,self.img1,img]) ;
+        self.img0 = self.img1 ; self.img1 = img ;
+        return ret ;
+    
+    def get_observation(self, **kwargs):
+        return self.glue_images(self.state)

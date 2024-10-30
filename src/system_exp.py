@@ -3,6 +3,25 @@ from regelum.callback import detach
 
 
 @detach
+class ThreeWheelLineFollowing(System):
+    _name = "line_following"
+    _system_type = "gz"
+    _dim_inputs = 2
+    _dim_state = 2*50*3
+    _dim_observation = _dim_state * 3 # 3 last states
+    _parameters = {"m": 1, "g": 9.8, "l": 1}
+    # _observation_naming = _state_naming = ["angle [rad]", "angular velocity [rad/s]"]
+    _observation_naming = _state_naming = [f"Image pixel {i}" for i in range(_dim_observation)]
+    _inputs_naming = ["Linear Velocity [m/s]", "Angular Velocity [rad/s]"]
+    _action_bounds = [[0.0, 0.5], [-1.57, 1.57]] # m/s and rad/s
+
+    def __init__(self, system_parameters_init = None, state_init = None, inputs_init = None):
+        super().__init__(system_parameters_init, state_init, inputs_init)
+
+    def _compute_state_dynamics(self, time, state, inputs):
+        return
+
+@detach
 class ThreeWheelPushingObject(System):
     _name = "pushing_object"
     _system_type = "gz"

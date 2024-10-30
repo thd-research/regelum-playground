@@ -1,8 +1,7 @@
-#!/bin/bash
+#! /bin/bash
 PROCESSES=(
     "gz.*sim"
     "colored_line_following.sdf"
-    "models/pushing_objects.sdf"
     "gazebo_simulator"
     "ruby"
     "gz"
@@ -74,7 +73,7 @@ function execute_state {
 }
 
 
-# *------------ COMMON DEFINITIONS ----------------------
+#------------ COMMON DEFINITIONS ----------------------
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
 echo ARGS $#
@@ -83,10 +82,12 @@ SRC_PATH=${1} ;
 PROJECT_DIR=${2}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
-# *-------------------------------------------------------
+#-------------------------------------------------------
 
-# PYTHONPATH - PYTHONPATH - PYTHONPATH --------------------------------
+
+# PYTHONPATH - PYTHONPATh - PYTHONPATH --------------------------------
 export PYTHONPATH=$PYTHONPATH:${ROOT_PATH}/src
+export PYTHONPATH=$PYTHONPATH:${SRC_PATH}/sccl/src
 # *--------------------------------------------------------------------
 
 # GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ - GZ
@@ -102,40 +103,36 @@ export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 # kill zombies
 execute_watchout
 
-# debug
 #ps -ef | grep gz
 
-
 # start gazebo
-# sim_options=" -r -s --headless-rendering --render-engine ogre2"
+# sim_options=" -r -s --headless-rendering --render-engine ogre2 "
 sim_options=" -r --render-engine ogre2"
-#sim_options=" -r --render-engine ogre"
-gz sim ${sim_options} "${ROOT_PATH}/models/pushing_objects.sdf"  &
+gz sim ${sim_options} "${ROOT_PATH}/models/colored_line_following.sdf"  &
 
 # debug
-ps -ef | grep gz
+#ps -ef | grep gz
 
 # start RL
 echo  Executing Experiment
 
 REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     python3 run.py \
-    scenario=sac_pushing_object \
-    simulator=gz_3w \
-    system=3wrobot_pushing_object \
-    running_objective=3wrobot_pushing_object \
+    scenario=sac_line_following \
+    simulator=gz_3w_lf \
+    system=3wrobot_line_following \
+    running_objective=3wrobot_line_following \
     scenario.autotune=False \
     scenario.policy_lr=0.00079 \
     scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
-    +seed=4 \
-    --fps=10
+    scenario.learning_starts=1000 \
+    +seed=4
 
 echo DONE
 
 # kill zombies
-execute_watchout
+# execute_watchout
 
-# debug
-# ps -ef | grep gz
+#ps -ef | grep gz
 
