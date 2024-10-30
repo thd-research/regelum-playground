@@ -16,4 +16,4 @@ target_network_frequency: 1
 alpha: 0.2
 autotune: True
 reset_rb_each_task: False
-checkpoint_dirpath: None
+checkpoint_dirpath: null
