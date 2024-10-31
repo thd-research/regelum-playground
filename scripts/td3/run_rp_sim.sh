@@ -5,7 +5,6 @@ PROCESSES=(
     "pushing_objects.sdf"
     "models/catching_robot.sdf"
     "gazebo_simulator"
-    "ExperimentPO.py"
     "ruby"
     "gz"
 )
@@ -122,16 +121,10 @@ echo  Executing Experiment
 
 REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     python3 run.py \
-    scenario=sac_robot_pursuit \
+    scenario=td3_robot_pursuit \
     simulator=gz_3w_rp \
     system=3wrobot_robot_pursuit \
     running_objective=3wrobot_robot_pursuit \
-    scenario.autotune=False \
-    scenario.policy_lr=0.00079 \
-    scenario.q_lr=0.00025 \
-    scenario.alpha=0.0085 \
-    scenario.total_timesteps=40 \
-    scenario.learning_starts=1000 \
     +seed=4
 
 echo DONE

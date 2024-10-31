@@ -99,6 +99,7 @@ class TD3Scenario(CleanRLScenario):
         exploration_noise: float = 0.1,
         learning_rate: float = 3e-4,
         policy_noise: float = 0.2,
+        env: RgEnv = RgEnv,
     ):
         """
         Initialize the TD3Scenario.
@@ -124,6 +125,7 @@ class TD3Scenario(CleanRLScenario):
             running_objective=running_objective,
             total_timesteps=total_timesteps,
             device=device,
+            env=env
         )
         self.buffer_size = buffer_size
         self.gamma = gamma

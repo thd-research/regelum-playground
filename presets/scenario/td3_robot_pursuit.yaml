@@ -1,0 +1,18 @@
+_target_: src.scenario.gz_experiments.RobotPursuitTD3Scenario
+
+simulator: ~ simulator
+running_objective: ~ running_objective
+device: "cpu"
+total_timesteps: 6000
+buffer_size: 24000
+gamma: 0.99
+tau: 0.005
+batch_size: 256
+learning_starts: 25000
+policy_frequency: 2
+noise_clip: 0.5
+exploration_noise: 0.1
+learning_rate: 3e-4
+policy_noise: 0.2
+reset_rb_each_task: False
+checkpoint_dirpath: null
