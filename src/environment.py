@@ -14,6 +14,7 @@ from gz.msgs10.boolean_pb2 import Boolean ;
 from gz.msgs10.pose_pb2 import Pose ;
 from gz.msgs10.pose_v_pb2 import Pose_V ;
 import time
+import copy
 import traceback
 
 
@@ -81,6 +82,25 @@ class EnvironmentConfig():
         self.vehicle_prefix = vehicle_prefix
         self.world_name = world_name
         self.camera_topic = camera_topic
+
+
+class CatchingRobotConfig(EnvironmentConfig):
+    def __init__(self, 
+                 observation_shape: Tuple[int, int, int], 
+                 tasks: Dict[str, Task], 
+                 actions: List[TwistAction], 
+                 robot_name: str, 
+                 vehicle_prefix: str, 
+                 world_name: str, 
+                 camera_topic: str, 
+                 runner_action:TwistAction,
+                 runner_start_positions:Task, 
+                 debug = False) -> None:
+        super().__init__(observation_shape, tasks, actions, robot_name, vehicle_prefix, world_name, camera_topic, debug)
+
+        ### RUNNER SPECIFIC
+        self.runner_action = runner_action
+        self.runner_start_positions = runner_start_positions
 
     
 class EnvironmentManager(Node):
@@ -214,6 +234,96 @@ class EnvironmentManager(Node):
           if response.data == True: break ;
         if self.env_config.debug=="yes": print(f'pause={pause} request done!')
 
+
+class CatchingRobotManager(EnvironmentManager):
+    def __init__(self,env_config:CatchingRobotConfig):
+        self.init_node()
+        self.mutex = Lock()
+
+        self.env_config = env_config
+
+        self.robot_name = self.env_config.robot_name
+        self.vehicle_prefix = self.env_config.vehicle_prefix
+        self.world_name = self.env_config.world_name
+
+        self.runner_action = env_config.runner_action
+        self.runner_start_positions = env_config.runner_start_positions
+        self.runner_name = next(iter(self.env_config.tasks.values())).task_name
+
+        self.step = 0
+        self.last_obs_time = 0
+
+        if self.subscribe(Image,f'{self.vehicle_prefix}/camera',self.gz_handle_observation_callback):
+            print("Subscribed to Camera!")
+
+        if self.subscribe(Pose_V,f'{self.world_name}/dynamic_pose/info',self.gz_handle_dynamic_pose_callback):
+            print("Subscribed to dynamic_pose/info! for catching robot")
+
+        if self.subscribe(Pose_V,f'{self.world_name}/dynamic_pose/info',self.gz_handle_another_dynamic_pose_callback):
+            print("Subscribed to dynamic_pose/info! for running robot")
+
+        self.gz_action = self.advertise(f'{self.vehicle_prefix}/motor',Twist)
+
+        self.gz_runner_actions = {}
+        for task in env_config.tasks.values():
+            self.gz_runner_actions[task.task_name] = self.advertise(f'/{task.task_name}/motor',Twist)
+
+        #self.scene_publisher = self.advertise(f'{self.world_name}/default/scene', Scene) # possibly .../default/scene
+
+        self.wait_for_simulation()
+
+        self.world_control_service = f'{self.world_name}/control'
+        self.res_req = WorldControl()
+        self.set_pose_service = f'{self.world_name}/set_pose'
+        self.pos_req = Pose()
+        self.observation_shape = None
+
+    def get_runner_position(self):
+        return self.runner_position
+    
+    def perform_reset(self, position, orientation):
+        self.runner_position = self.runner_start_positions.get_random_start()
+        self.set_entity_pose_request(self.runner_name,self.runner_position.position,self.runner_position.orientation)
+        return super().perform_reset(position, orientation)
+    
+    def park_runner(self, task_id):
+        parking_transform = self.env_config.tasks[task_id].get('parking')
+        self.gz_stop_runner()
+        self.set_entity_pose_request(self.runner_name,parking_transform.position,parking_transform.orientation)
+        print(f"parked runner {self.runner_name} at {parking_transform.position}")
+    
+    def perform_switch(self,task_id:str):
+        ### task_name has to coincide with the name of the robot in question
+        if hasattr(self,'task_id'):
+            self.park_runner(self.task_id)
+        self.task_id = task_id
+        self.runner_name = self.env_config.tasks[task_id].task_name
+    
+    def rotate_runner(self,transform:Task.Transform):
+        tmp = copy.deepcopy(transform)
+        angle = np.random.uniform(-60,60)
+        tmp.add_rotation([0,0,int(angle)])
+        self.set_entity_pose_request(self.runner_name,self.runner_position,tmp.orientation)
+        print(f"redirected {self.runner_name} at {self.runner_position} by {tmp.orientation}")
+
+    def gz_start_runner(self):
+        self.gz_runner_actions[self.runner_name].publish(self.runner_action.return_instruction())
+        if self.env_config.debug =="yes": print(f'runner_action published: ', self.runner_action.to_string())
+
+    def gz_stop_runner(self):
+        action = TwistAction('stop', [0.0, 0.0])
+        self.gz_runner_actions[self.runner_name].publish(action.return_instruction())
+        print(f'Stopping {self.runner_name}!')
+
+    def gz_handle_another_dynamic_pose_callback(self, msg):
+        with self.mutex:
+            for p in msg.pose:
+                if p.name == self.runner_name:
+                    self.runner_position = [p.position.x,p.position.y,p.position.z];
+                    return;
+            print(f"THERE WAS NO\033[92m {self.runner_name}\033[0m IN THE SIMULATION!")
+
+
 class PushingObject(RgEnv):
     OBJ_ID_LOOKUP = {"red":0, "green":1, "blue":2, "yellow":3, "pink":4, "cyan":5}
 
@@ -322,8 +432,6 @@ class PushingObject(RgEnv):
 
 
 class LineFollowing(RgEnv):
-    OBJ_ID_LOOKUP = {"red":0, "green":1, "blue":2, "yellow":3, "pink":4, "cyan":5}
-
     def __init__(self, simulator, 
                  running_objective, 
                  action_space = None, 
@@ -384,6 +492,125 @@ class LineFollowing(RgEnv):
     
     def _get_obs(self):
         return self.simulator.observation
+    
+    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+        super(RgEnv, self).reset(seed=seed)
+        
+        current_task = self.tasks[self.task_id]
+        self.current_name = current_task.task_name
+        self.starting_transform = current_task.get_random_start()
+        self.info['track'] = self.current_name
+
+        self.simulator.reset(current_task)
+        self.state = np.copy(self.simulator.state).reshape(-1)
+        return self._get_obs().reshape(-1), {}
+
+
+class RobotPursuit(RgEnv):
+    def __init__(self, simulator, 
+                 running_objective, 
+                 action_space = None, 
+                 observation_space = None,
+                 task_list = ["red_cube", "green_capsule", "blue_sphere", "yellow_cylinder"]):
+        
+        print("simulator:", simulator)
+        assert hasattr(simulator, "set_manager")
+
+        super().__init__(simulator, 
+                         running_objective, 
+                         action_space, 
+                         observation_space)
+        ## Possible Tasks (With either 15 or -15 rotation as starting point)
+        tasks = {}
+        tasks['red_cube']        = Task('red_runner_robot',[Task.Transform([-1.2,0.0,0.05],[0.0,0.0,15.0]),
+                                                            Task.Transform([-1.2,0.0,0.05],[0.0,0.0,-15.0])],
+                                        parking=Task.Transform([-30,-1,-0.25],[0,0,0]))
+        tasks['green_capsule']   = Task('green_runner_robot',[Task.Transform([-1.2,0.0,0.05],[0.0,0.0,15.0]),
+                                                              Task.Transform([-1.2,0.0,0.05],[0.0,0.0,-15.0])],
+                                        parking=Task.Transform([-30,-2,-0.25],[0,0,0]))
+        tasks['blue_sphere']     = Task('blue_runner_robot',[Task.Transform([-1.2,0.0,0.05],[0.0,0.0,15.0]),
+                                                             Task.Transform([-1.2,0.0,0.05],[0.0,0.0,-15.0])],
+                                        parking=Task.Transform([-30,-3,-0.25],[0,0,0]))
+        tasks['yellow_cylinder'] = Task('yellow_runner_robot',[Task.Transform([-1.2,0.0,0.05],[0.0,0.0,15.0]),
+                                                               Task.Transform([-1.2,0.0,0.05],[0.0,0.0,-15.0])],
+                                        parking=Task.Transform([-30,-4,-0.25],[0,0,0]))
+        
+        self.cardinal_directions = {
+            'north' : Task.Transform([0.0,0.0,0.0],[0,0,0]),
+            'east' : Task.Transform([0.0,0.0,0.0],[0,0,90]),
+            'south' : Task.Transform([0.0,0.0,0.0],[0,0,180]),
+            'west' : Task.Transform([0.0,0.0,0.0],[0,0,270])
+        }
+
+        ### Depending on what png the ground_plane uses
+        tiny_arena = [-2.5,2.5,-2.5,2.5]
+        small_arena = [-5,5,-5,5]
+        big_arena = [-10,10,-10,10]
+
+        self.arena_bounds = tiny_arena # TODO: Argparse!
+        self.runner_collision_thickness = 0.42 # TODO: Argparse!
+
+        self.task_list = task_list
+        self.tasks = tasks
+        self.info = dict()
+
+        runner_start_positions = Task('runner_start',[Task.Transform([0.0,0.0,-0.25],[0.0,0.0,60.0]),
+                                                      Task.Transform([0.0,0.0,-0.25],[0.0,0.0,-60.0])])
+
+        env_config = CatchingRobotConfig(
+            observation_shape=[20, 20, 3],
+            tasks=tasks,
+            actions=self.action_space,
+            robot_name='catcher_robot',
+            vehicle_prefix='/vehicle',
+            world_name='/world/catching_robot_world',
+            camera_topic='/vehicle/camera',
+            runner_action=TwistAction('forward',[0.25, 0]),
+            runner_start_positions=runner_start_positions,
+            debug=False
+        )
+
+        simulator.set_manager(env_config)
+        simulator.set_arena_bounds(self.arena_bounds)
+        time.sleep(0.01)
+
+    def step(self, action):
+        self.simulator.receive_action(
+            self.simulator.system.apply_action_bounds(action.reshape(1, -1))
+        )
+
+        reward, truncated, terminated = self.running_objective(
+            self._get_state(), 
+            self._get_robot_pos(), 
+            self._get_runner_pos(), 
+            action, 
+            self.simulator.step_count, 
+            self.simulator.max_step_per_episode,
+            self.runner_collision_thickness,
+            self.arena_bounds,
+            self.info
+        )
+        sim_step = self.simulator.do_sim_step()
+        self.state = np.copy(self.simulator.state).reshape(-1)
+        return self._get_obs().reshape(-1), reward, truncated, sim_step is not None or terminated, {}
+
+    def get_current_status(self):
+        return (self.info['terminate_cond'],)
+    
+    def switch_task(self, task_index):
+        self.task_id = self.task_list[task_index]
+    
+    def _get_state(self):
+        return self.simulator.state
+    
+    def _get_obs(self):
+        return self.simulator.observation
+
+    def _get_robot_pos(self):
+        return np.array(self.simulator.manager.get_position())
+    
+    def _get_runner_pos(self):
+        return np.array(self.simulator.manager.get_runner_position())
     
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super(RgEnv, self).reset(seed=seed)

@@ -150,3 +150,75 @@ class LineFollowingRunningObjective:
 
         terminated = ret < 0.
         return ret, truncated, terminated
+
+
+class RobotPursuitRunningObjective:
+    def __call__(self, 
+                 state, 
+                 catcher_pos, 
+                 runner_pos, 
+                 action, 
+                 step_count, 
+                 max_steps_per_episode,
+                 runner_collision_thickness,
+                 arena_bounds,
+                 info: dict):
+        if not hasattr(self, "x"):
+            # for reward computation
+            c2 = state.shape[0]
+            self.x = np.arange(0,c2).reshape(1,c2) * np.ones([c2,1])
+            self.y = np.ones([1,c2]) * np.arange(0,c2).reshape(c2,1)
+
+        truncated = False
+        terminated = False
+        c = (state.shape[0] // 2)
+        hsv = matplotlib.colors.rgb_to_hsv(state)
+        h = hsv[:,:,0]
+        s = hsv[:,:,1]
+        v = hsv[:,:,2]
+        colored_pixels = (s > 0.3).astype(np.int32)
+
+        csum = colored_pixels.sum()
+        # print(hsv.shape, "VMINMAX", "H", h.min(), h.max(), "S", s.min(), s.max(), "V", v.min(), v.max(), csum)
+
+        cog_x = (self.x*colored_pixels).sum()  / csum if csum > 0 else 0.
+ 
+        reward = 1. - math.fabs(cog_x - c) / c
+
+        if csum < 5:  # LOST SIGHT OF OBJECT
+            truncated = True
+            print("COND: LOST")
+            return -1.0, truncated, terminated
+
+        collider = runner_collision_thickness / 2.0
+
+        if catcher_pos[0] <= runner_pos[0] + collider and \
+                catcher_pos[0] >= runner_pos[0] - collider and \
+                catcher_pos[1] <= runner_pos[1] + collider and \
+                catcher_pos[1] >= runner_pos[1] - collider:
+            truncated = True
+            reward = 10
+            info["terminate_cond"] = 'Cought_Runner'
+        elif catcher_pos[0] < arena_bounds[0] or \
+                catcher_pos[0] > arena_bounds[1] or \
+                catcher_pos[1] < arena_bounds[2] or \
+                catcher_pos[1] > arena_bounds[3]:
+            truncated = True
+            reward = -10
+            info["terminate_cond"] = 'Left_Arena'
+        elif csum < 1:  # LOST SIGHT OF OBJECT
+            truncated = True
+            info["terminate_cond"] = 'Lost_Runner'
+            reward = -10
+        elif step_count >= max_steps_per_episode:
+            terminated = True
+            info["terminate_cond"] ='Max_Steps_Reached'
+            reward = -10
+        else:
+            info["terminate_cond"] = f"COND: Normal, REWARD: {reward}"
+            modifier = 0.1 if all(np.isclose(action, np.zeros_like(action))) else 1.0 ; # punish stop action
+            reward = reward*modifier
+        
+        print("[Objective Function]", info["terminate_cond"])
+              
+        return reward , truncated, terminated
