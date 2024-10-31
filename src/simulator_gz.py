@@ -15,6 +15,7 @@ class Robot3Pi(Simulator):
                  system: System | ComposedSystem,
                  state_init: ndarray | None = None, 
                  action_init: ndarray | None = None, 
+                 max_step_per_episode: int = 30,
                  time_final: float | None = 1, 
                  max_step: float | None = 0.001, 
                  first_step: float | None = 0.000001, 
@@ -31,10 +32,12 @@ class Robot3Pi(Simulator):
         #                                camera_topic='/vehicle/camera')
         # self.set_manager(env_config)
         self.step_count = 0
+        self.max_step_per_episode = max_step_per_episode
 
         super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
         self._action = np.expand_dims(self.initialize_init_action(), axis=0)
         self.loginfo = logging.getLogger("regelum").info
+        self.time_final = max_step_per_episode * max_step
 
     def set_manager(self, env_config:EnvironmentConfig):
         self.manager = EnvironmentManager(env_config)
@@ -165,19 +168,19 @@ class Robot3PiLineFollowing(Robot3Pi):
 
 
 class Robot3PiRobotPursuit(Robot3Pi):
-    def __init__(self, 
-                 system, 
-                 state_init = None, 
-                 action_init = None, 
-                 time_final = 1, 
-                 max_step_per_episode = 30,
-                 max_step = 0.001, 
-                 first_step = 0.000001, 
-                 atol = 0.00001, 
-                 rtol = 0.001):
-        super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
-        self.max_step_per_episode = max_step_per_episode
-        self.time_final = max_step_per_episode * max_step
+    # def __init__(self, 
+    #              system, 
+    #              state_init = None, 
+    #              action_init = None, 
+    #              time_final = 1, 
+    #              max_step_per_episode = 30,
+    #              max_step = 0.001, 
+    #              first_step = 0.000001, 
+    #              atol = 0.00001, 
+    #              rtol = 0.001):
+    #     super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
+    #     self.max_step_per_episode = max_step_per_episode
+    #     self.time_final = max_step_per_episode * max_step
 
     def set_manager(self, env_config):
         self.manager = CatchingRobotManager(env_config)

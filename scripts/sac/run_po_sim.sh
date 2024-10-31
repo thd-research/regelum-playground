@@ -128,6 +128,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.policy_lr=0.00079 \
     scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
+    scenario.total_timesteps=40 \
     +seed=4 \
     --fps=10
 
