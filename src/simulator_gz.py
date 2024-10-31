@@ -17,7 +17,7 @@ class Robot3Pi(Simulator):
                  action_init: ndarray | None = None, 
                  max_step_per_episode: int = 30,
                  time_final: float | None = 1, 
-                 max_step: float | None = 0.001, 
+                 obs_per_sec_sim_time: int | None = 15, 
                  first_step: float | None = 0.000001, 
                  atol: float | None = 0.00001, 
                  rtol: float | None = 0.001
@@ -33,6 +33,8 @@ class Robot3Pi(Simulator):
         # self.set_manager(env_config)
         self.step_count = 0
         self.max_step_per_episode = max_step_per_episode
+        
+        max_step = 1 / obs_per_sec_sim_time
 
         super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
         self._action = np.expand_dims(self.initialize_init_action(), axis=0)
@@ -47,7 +49,6 @@ class Robot3Pi(Simulator):
         self.time = 0.0
         self.step_count = 0
 
-        self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.episode_start = None
 
         self.receive_action(np.zeros_like(self._action))
@@ -102,7 +103,7 @@ class Robot3Pi(Simulator):
         self.update_time()
         self.step_count += 1
 
-        if self.time >= self.time_final:
+        if self.step_count >= self.max_step_per_episode:
             return -1
         
         # if rospy.is_shutdown():
@@ -168,20 +169,6 @@ class Robot3PiLineFollowing(Robot3Pi):
 
 
 class Robot3PiRobotPursuit(Robot3Pi):
-    # def __init__(self, 
-    #              system, 
-    #              state_init = None, 
-    #              action_init = None, 
-    #              time_final = 1, 
-    #              max_step_per_episode = 30,
-    #              max_step = 0.001, 
-    #              first_step = 0.000001, 
-    #              atol = 0.00001, 
-    #              rtol = 0.001):
-    #     super().__init__(system, state_init, action_init, time_final, max_step, first_step, atol, rtol)
-    #     self.max_step_per_episode = max_step_per_episode
-    #     self.time_final = max_step_per_episode * max_step
-
     def set_manager(self, env_config):
         self.manager = CatchingRobotManager(env_config)
 
@@ -190,7 +177,6 @@ class Robot3PiRobotPursuit(Robot3Pi):
         self.time = 0.0
         self.step_count = 0
 
-        self.appox_num_step = np.ceil(self.time_final/self.max_step)
         self.episode_start = None
 
         self.receive_action(np.zeros_like(self._action))
