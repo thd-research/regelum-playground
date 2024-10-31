@@ -1,5 +1,5 @@
 from src.scenario.sac import SACScenario
-from src.environment import PushingObject, LineFollowing
+from src.environment import PushingObject, LineFollowing, RobotPursuit
 
 from pathlib import Path
 import torch
@@ -119,6 +119,27 @@ class LineFollowingSACScenario(SACScenarioWrapper):
                          reset_rb_each_task, 
                          checkpoint_dirpath, 
                          LineFollowing)
+
+class RobotPursuitSACScenario(SACScenarioWrapper):
+    def __init__(self, simulator, running_objective, device="cuda:0", total_timesteps=1000000, buffer_size=1000000, gamma=0.99, tau=0.005, batch_size=256, learning_starts=5000, policy_lr=0.0003, q_lr=0.001, policy_frequency=2, target_network_frequency=1, alpha=0.2, autotune=True, reset_rb_each_task=False, checkpoint_dirpath=None, env=...):
+        super().__init__(simulator, 
+                        running_objective, 
+                        device, 
+                        total_timesteps, 
+                        buffer_size, 
+                        gamma, 
+                        tau, 
+                        batch_size, 
+                        learning_starts, 
+                        policy_lr, 
+                        q_lr, 
+                        policy_frequency, 
+                        target_network_frequency, 
+                        alpha, 
+                        autotune, 
+                        reset_rb_each_task, 
+                        checkpoint_dirpath, 
+                        RobotPursuit)
 
 
 def save_nn_model(

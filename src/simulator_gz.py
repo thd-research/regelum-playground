@@ -224,7 +224,7 @@ class Robot3PiRobotPursuit(Robot3Pi):
         self.update_time()
         self.step_count += 1
 
-        if self.time >= self.time_final:
+        if self.step_count >= self.max_step_per_episode:
             return -1
         
         # if rospy.is_shutdown():

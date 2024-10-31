@@ -394,6 +394,7 @@ class PushingObject(RgEnv):
     
     def switch_task(self, task_index):
         self.task_id = self.task_list[task_index]
+        self.simulator.manager.perform_switch(self.task_id)
 
     def _get_obs(self):
         return self.simulator.observation
@@ -486,6 +487,7 @@ class LineFollowing(RgEnv):
     
     def switch_task(self, task_index):
         self.task_id = self.task_list[task_index]
+        self.simulator.manager.perform_switch(self.task_id)
     
     def _get_state(self):
         return self.simulator.state
@@ -599,6 +601,8 @@ class RobotPursuit(RgEnv):
     
     def switch_task(self, task_index):
         self.task_id = self.task_list[task_index]
+        print("receive self.task_id:", self.task_id)
+        self.simulator.manager.perform_switch(self.task_id)
     
     def _get_state(self):
         return self.simulator.state
@@ -616,10 +620,6 @@ class RobotPursuit(RgEnv):
         super(RgEnv, self).reset(seed=seed)
         
         current_task = self.tasks[self.task_id]
-        self.current_name = current_task.task_name
-        self.starting_transform = current_task.get_random_start()
-        self.info['track'] = self.current_name
-
         self.simulator.reset(current_task)
         self.state = np.copy(self.simulator.state).reshape(-1)
         return self._get_obs().reshape(-1), {}

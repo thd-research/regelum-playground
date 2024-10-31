@@ -1,0 +1,19 @@
+_target_: src.scenario.gz_experiments.RobotPursuitSACScenario
+
+simulator: ~ simulator
+running_objective: ~ running_objective
+device: "cpu"
+total_timesteps: 6000
+buffer_size: 24000
+gamma: 0.99
+tau: 0.005
+batch_size: 256
+learning_starts: 1000
+policy_lr: 3.0e-4
+q_lr: 1.0e-3
+policy_frequency: 2
+target_network_frequency: 1
+alpha: 0.2
+autotune: True
+reset_rb_each_task: False
+checkpoint_dirpath: null
