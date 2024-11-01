@@ -138,6 +138,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
 echo DONE
 
 # kill zombies
+sleep 5s
 execute_watchout
 
 # debug
