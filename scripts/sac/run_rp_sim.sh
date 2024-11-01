@@ -82,7 +82,7 @@ PROJECT_DIR="regelum-playground"
 echo ARGS $#
 if [ "$#" == "2" ] ; then
 SRC_PATH=${1} ;
-PROJECT_DIR=${2}
+BUFFER_RESET=${2}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
 # *-------------------------------------------------------
@@ -130,8 +130,12 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.policy_lr=0.00079 \
     scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
-    scenario.learning_starts=1000 \
-    +seed=4
+    scenario.learning_starts=2000 \
+    scenario.total_timesteps=6000 \
+    scenario.buffer_size=24000 \
+    scenario.reset_rb_each_task=${BUFFER_RESET} \
+    +seed=42 \
+    --experiment=sac_rp
 
 echo DONE
 

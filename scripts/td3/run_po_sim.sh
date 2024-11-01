@@ -80,7 +80,7 @@ PROJECT_DIR="regelum-playground"
 echo ARGS $#
 if [ "$#" == "2" ] ; then
 SRC_PATH=${1} ;
-PROJECT_DIR=${2}
+BUFFER_RESET=${2}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
 # *-------------------------------------------------------
@@ -124,8 +124,12 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     simulator=gz_3w \
     system=3wrobot_pushing_object \
     running_objective=3wrobot_pushing_object \
-    +seed=4 \
-    --fps=10
+    scenario.learning_starts=2000 \
+    scenario.total_timesteps=6000 \
+    scenario.buffer_size=24000 \
+    scenario.reset_rb_each_task=${BUFFER_RESET} \
+    +seed=42 \
+    --experiment=td3_po
 
 echo DONE
 
