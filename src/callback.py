@@ -52,7 +52,8 @@ class GZHistoricalDataCallback(HistoricalDataCallback):
                         ],
                         "episode_id": output["episode_id"],
                         "iteration_id": output["iteration_id"],
-                        "task_name": output["task_name"]
+                        "task_name": output["task_name"],
+                        "step_id": output["step_id"]
                     },
                     **dict(zip(self.action_components_naming, output["action"][0])),
                     **dict(
