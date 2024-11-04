@@ -78,9 +78,9 @@ function execute_state {
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
 echo ARGS $#
-if [ "$#" == "2" ] ; then
-SRC_PATH=${1} ;
-BUFFER_RESET=${2}
+if [ "$#" == "1" ] ; then
+BUFFER_RESET=${1}
+echo "BUFFER_RESET" ${BUFFER_RESET}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
 # *-------------------------------------------------------

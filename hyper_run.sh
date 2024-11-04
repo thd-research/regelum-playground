@@ -2,6 +2,7 @@
  
 ## define an array with three items ##
 controllers=( sac td3 )
+# controllers=( td3 )
 tasks=( run_lf_sim.sh run_po_sim.sh run_rp_sim.sh )
 reset_replay_buffer=( true false ) 
 
@@ -12,6 +13,7 @@ for c in "${controllers[@]}"; do
          
         echo "${c} - ${t}" ${r}
         source scripts/${c}/${t} ${r}
+        sleep 10s
         # do something on $m #
         done
 
