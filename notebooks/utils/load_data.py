@@ -5,7 +5,6 @@ import numpy as np
 import sys, traceback
 import pandas as pd
 
-
 from utils.load_config import (
     get_df_historical_data,
     get_list_historical_data,
@@ -119,7 +118,8 @@ def get_df_from_datetime_range(start_datetime_str,
                 continue
 
             tmp_df["absolute_path"] = iteration_path
-            tmp_df["exp_config"] = load_exp_config(exp_path)
+            config = load_exp_config(exp_path)
+            tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
             
             if objective_function is not None:
                 tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
