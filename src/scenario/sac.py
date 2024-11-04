@@ -215,6 +215,24 @@ class SACScenario(CleanRLScenario):
         else:
             self.alpha = alpha
 
+    @apply_callbacks()
+    def post_compute_action(self, state, obs, action, reward, time, global_step):
+        self.current_running_objective = reward
+        self.value += reward
+        return {
+            "estimated_state": state,
+            "observation": obs,
+            "time": time,
+            "episode_id": self.episode_id,
+            "iteration_id": self.iteration_id,
+            "step_id": global_step,
+            "action": action,
+            "running_objective": reward,
+            "current_value": None,
+            "current_undiscounted_value": self.value,
+            "task_name": self.task_name if hasattr(self, "task_name") else ""
+        }
+    
     def run(self):
         start_debug = True
 

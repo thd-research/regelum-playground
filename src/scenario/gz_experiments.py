@@ -52,13 +52,12 @@ class SACScenarioWrapper(SACScenario):
         if hasattr(self, "checkpoint_dirpath"):
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        for id, task_info in enumerate(self.envs.envs[0].env.task_list):
-            print("task_info:", task_info)
-
+        for id, task_name in enumerate(self.envs.envs[0].env.task_list):
             # reset replay buffer
             if self.reset_rb_each_task:
                 self.rb.reset()
 
+            self.task_name = task_name
             self.envs.envs[0].env.switch_task(id)
             super().run()
 
@@ -130,6 +129,7 @@ class TD3ScenarioWrapper(TD3Scenario):
             if self.reset_rb_each_task:
                 self.rb.reset()
 
+            self.task_name = task_info
             self.envs.envs[0].env.switch_task(id)
             super().run()
 
