@@ -252,7 +252,7 @@ class TD3Scenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if check_learning_start and global_step > self.learning_starts:
+            if not check_learning_start or global_step > self.learning_starts:
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     clipped_noise = (
