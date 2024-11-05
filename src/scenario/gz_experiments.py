@@ -59,7 +59,7 @@ class SACScenarioWrapper(SACScenario):
 
             self.task_name = task_name
             self.envs.envs[0].env.switch_task(id)
-            super().run()
+            super().run(check_learning_start=(id == 0))
 
         self.save_checkpoint()
     
