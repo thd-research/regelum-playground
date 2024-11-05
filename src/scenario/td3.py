@@ -189,11 +189,12 @@ class TD3Scenario(CleanRLScenario):
             "task_name": self.task_name if hasattr(self, "task_name") else ""
         }
     
-    def run(self):
+    def run(self,
+            check_learning_start=True):
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
             # ALGO LOGIC: put action logic here
-            if global_step < self.learning_starts:
+            if check_learning_start and global_step < self.learning_starts:
                 actions = np.array(
                     [
                         np.random.uniform(
@@ -251,7 +252,7 @@ class TD3Scenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if global_step > self.learning_starts:
+            if check_learning_start and global_step > self.learning_starts:
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     clipped_noise = (

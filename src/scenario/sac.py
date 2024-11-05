@@ -233,13 +233,13 @@ class SACScenario(CleanRLScenario):
             "task_name": self.task_name if hasattr(self, "task_name") else ""
         }
     
-    def run(self):
+    def run(self, check_learning_start=True):
         start_debug = True
 
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
             # ALGO LOGIC: put action logic here
-            if global_step < self.learning_starts:
+            if check_learning_start and global_step < self.learning_starts:
                 actions = np.array(
                     [
                         np.random.uniform(
@@ -290,7 +290,7 @@ class SACScenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if global_step > self.learning_starts:
+            if check_learning_start and global_step > self.learning_starts:
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     next_state_actions, next_state_log_pi, _ = self.actor.get_action(
