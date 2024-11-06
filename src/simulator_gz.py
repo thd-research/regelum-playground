@@ -146,7 +146,7 @@ class Robot3Pi(Simulator):
         self.observation = self.state
             # response = self.manager.get_data()
             # self.observation = self.manager.convert_image_msg(response)
-        
+        print("In simulator:", np.sum(self.observation))
         return self.observation
 
 

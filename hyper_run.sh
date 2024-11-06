@@ -3,8 +3,8 @@
 ## define an array with three items ##
 controllers=( sac td3 )
 # controllers=( td3 )
-tasks=( run_lf_sim.sh run_po_sim.sh run_rp_sim.sh )
-reset_replay_buffer=( true false ) 
+tasks=( run_po_sim.sh run_lf_sim.sh run_rp_sim.sh )
+reset_replay_buffer=( false true ) 
 
 ## get item count using ${arrayname[@]} ##
 for c in "${controllers[@]}"; do

@@ -368,7 +368,7 @@ class PushingObject(RgEnv):
                                        vehicle_prefix='/vehicle',
                                        world_name='/world/pushing_objects_world',
                                        camera_topic='/vehicle/camera',
-                                       debug="yes")
+                                       debug="no")
         self.task_list = task_list
         self.tasks = tasks
         self.info = dict()
@@ -397,7 +397,7 @@ class PushingObject(RgEnv):
         self.simulator.manager.perform_switch(self.task_id)
 
     def _get_obs(self):
-        return self.simulator.observation
+        return self.simulator.get_observation()
     
     def _get_pos(self):
         return np.array(self.simulator.manager.position)
@@ -493,7 +493,7 @@ class LineFollowing(RgEnv):
         return self.simulator.state
     
     def _get_obs(self):
-        return self.simulator.observation
+        return self.simulator.get_observation()
     
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super(RgEnv, self).reset(seed=seed)
@@ -608,7 +608,7 @@ class RobotPursuit(RgEnv):
         return self.simulator.state
     
     def _get_obs(self):
-        return self.simulator.observation
+        return self.simulator.get_observation()
 
     def _get_robot_pos(self):
         return np.array(self.simulator.manager.get_position())
