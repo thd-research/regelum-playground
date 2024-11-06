@@ -290,7 +290,8 @@ class SACScenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if not check_learning_start or global_step > self.learning_starts:
+            if (not check_learning_start and self.rb.buffer_size) or \
+                    (check_learning_start and global_step > self.learning_starts):
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     next_state_actions, next_state_log_pi, _ = self.actor.get_action(
