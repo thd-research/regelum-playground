@@ -4,6 +4,8 @@
 *.py[cod]
 *$py.class
 
+backup-data/
+
 # C extensions
 *.so
 

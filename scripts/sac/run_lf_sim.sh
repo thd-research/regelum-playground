@@ -76,10 +76,16 @@ function execute_state {
 #------------ COMMON DEFINITIONS ----------------------
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
+BUFFER_SIZE=16000
 echo ARGS $#
 if [ "$#" == "1" ] ; then
 BUFFER_RESET=${1}
 echo "BUFFER_RESET" ${BUFFER_RESET}
+elif [ "$#" == "2" ]
+then
+BUFFER_RESET=${1}
+BUFFER_SIZE=${2}
+echo "BUFFER_RESET:" ${BUFFER_RESET} " BUFFER_RESET:" ${BUFFER_SIZE}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
 #-------------------------------------------------------
@@ -128,7 +134,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.alpha=0.0085 \
     scenario.learning_starts=400 \
     scenario.total_timesteps=4000 \
-    scenario.buffer_size=16000 \
+    scenario.buffer_size=${BUFFER_SIZE} \
     scenario.reset_rb_each_task=${BUFFER_RESET} \
     +seed=42 \
     --experiment=sac_lf
