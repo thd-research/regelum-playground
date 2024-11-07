@@ -249,10 +249,10 @@ class SACScenario(CleanRLScenario):
                     ]
                 )
             else:
-                # actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
-                actions, _ = self.actor(torch.Tensor(obs).to(self.device))
+                _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                # actions, _ = self.actor(torch.Tensor(obs).to(self.device))
                 actions = (
-                        actions.cpu()
+                        actions.detach()
                         .numpy()
                         .clip(self.action_bounds[:, 0], self.action_bounds[:, 1])
                     )
