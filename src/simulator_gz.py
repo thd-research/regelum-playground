@@ -231,6 +231,9 @@ class Robot3PiRobotPursuit(Robot3Pi):
     def set_arena_bounds(self, arena_bounds):
         self.arena_bounds = arena_bounds
 
+    def set_cardinal_directions(self, cardinal_directions):
+        self.cardinal_directions = cardinal_directions
+
     def runner_out_of_bounds(self, runner_position:Tuple[float,float,float]):
         if runner_position[1] < self.arena_bounds[0]: # West of the arena
             self.manager.rotate_runner(self.cardinal_directions['east'])

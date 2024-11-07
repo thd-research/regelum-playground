@@ -572,6 +572,7 @@ class RobotPursuit(RgEnv):
             debug=False
         )
 
+        simulator.set_cardinal_directions(self.cardinal_directions)
         simulator.set_manager(env_config)
         simulator.set_arena_bounds(self.arena_bounds)
         time.sleep(0.01)
