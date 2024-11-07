@@ -249,8 +249,13 @@ class SACScenario(CleanRLScenario):
                     ]
                 )
             else:
-                actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
-                actions = actions.detach().cpu().numpy()
+                # actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                actions, _ = self.actor(torch.Tensor(obs).to(self.device))
+                actions = (
+                        actions.cpu()
+                        .numpy()
+                        .clip(self.action_bounds[:, 0], self.action_bounds[:, 1])
+                    )
 
             self.state = self.envs.envs[0].env.state.reshape(1, -1)
             self.time = self.envs.envs[0].env.simulator.time

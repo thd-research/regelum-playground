@@ -206,9 +206,9 @@ class TD3Scenario(CleanRLScenario):
             else:
                 with torch.no_grad():
                     actions = self.actor(torch.Tensor(obs).to(self.device))
-                    actions += torch.normal(
-                        0, self.actor.action_scale * self.exploration_noise
-                    )
+                    # actions += torch.normal(
+                    #     0, self.actor.action_scale * self.exploration_noise
+                    # )
                     actions = (
                         actions.cpu()
                         .numpy()
