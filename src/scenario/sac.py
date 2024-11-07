@@ -233,11 +233,17 @@ class SACScenario(CleanRLScenario):
             "task_name": self.task_name if hasattr(self, "task_name") else ""
         }
     
+    def meet_stop_condition(self):
+        return False
+    
     def run(self, check_learning_start=True):
         start_debug = True
 
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
+            if self.meet_stop_condition():
+                break
+
             # ALGO LOGIC: put action logic here
             if check_learning_start and global_step < self.learning_starts:
                 actions = np.array(
