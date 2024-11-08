@@ -47,25 +47,28 @@ class SACScenarioWrapper(SACScenario):
                          env)
         self.reset_rb_each_task = reset_rb_each_task
         self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "3"))
+        self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
         if checkpoint_dirpath is not None:
             self.checkpoint_dirpath = checkpoint_dirpath
 
     def run(self):
         if hasattr(self, "checkpoint_dirpath"):
+            print("Model Loaded", self.checkpoint_dirpath)
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
-        for id, task_name in enumerate(self.envs.envs[0].env.task_list):
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
+        if not self.eval_only:
+            self.phase = "train"
+            for id, task_name in enumerate(self.envs.envs[0].env.task_list):
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-            self.task_name = task_name
-            self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
+                self.task_name = task_name
+                self.envs.envs[0].env.switch_task(id)
+                super().run(check_learning_start=(id == 0))
 
-        self.save_checkpoint()
+            self.save_checkpoint()
 
         self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
@@ -87,11 +90,11 @@ class SACScenarioWrapper(SACScenario):
             return False
     
     def load_checkpoint(self, experiment_path):
-        load_nn_model(self.actor, "actor", experiment_path)
-        load_nn_model(self.qf1, "qf1", experiment_path)
-        load_nn_model(self.qf2, "qf2", experiment_path)
-        load_nn_model(self.qf1_target, "qf1_target", experiment_path)
-        load_nn_model(self.qf2_target, "qf2_target", experiment_path)
+        self.actor = load_nn_model(self.actor, "actor", experiment_path)
+        self.qf1 = load_nn_model(self.qf1, "qf1", experiment_path)
+        self.qf2 = load_nn_model(self.qf2, "qf2", experiment_path)
+        self.qf1_target = load_nn_model(self.qf1_target, "qf1_target", experiment_path)
+        self.qf2_target = load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
     def save_checkpoint(self):
         save_nn_model(self.actor, "actor")
@@ -172,20 +175,21 @@ class TD3ScenarioWrapper(TD3Scenario):
         if hasattr(self, "checkpoint_dirpath"):
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
+        if not self.eval_only:
+            self.phase = "train"
 
-        for id, task_info in enumerate(self.envs.envs[0].env.task_list):
-            print("task_info:", task_info)
+            for id, task_info in enumerate(self.envs.envs[0].env.task_list):
+                print("task_info:", task_info)
 
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-            self.task_name = task_info
-            self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
+                self.task_name = task_info
+                self.envs.envs[0].env.switch_task(id)
+                super().run(check_learning_start=(id == 0))
 
-        self.save_checkpoint()
+            self.save_checkpoint()
 
         self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
@@ -201,12 +205,12 @@ class TD3ScenarioWrapper(TD3Scenario):
             super().run(check_learning_start=False)
 
     def load_checkpoint(self, experiment_path):
-        load_nn_model(self.actor, "actor", experiment_path)
-        load_nn_model(self.actor_target, "actor_target", experiment_path)
-        load_nn_model(self.qf1, "qf1", experiment_path)
-        load_nn_model(self.qf2, "qf2", experiment_path)
-        load_nn_model(self.qf1_target, "qf1_target", experiment_path)
-        load_nn_model(self.qf2_target, "qf2_target", experiment_path)
+        self.actor = load_nn_model(self.actor, "actor", experiment_path)
+        self.actor_target = load_nn_model(self.actor_target, "actor_target", experiment_path)
+        self.qf1 = load_nn_model(self.qf1, "qf1", experiment_path)
+        self.qf2 = load_nn_model(self.qf2, "qf2", experiment_path)
+        self.qf1_target = load_nn_model(self.qf1_target, "qf1_target", experiment_path)
+        self.qf2_target = load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
     def save_checkpoint(self):
         save_nn_model(self.actor, "actor")
@@ -406,4 +410,4 @@ def load_nn_model(
     experiment_path: str
 ) -> None:
     checkpoint_path = Path(experiment_path) / ".checkpoint" / name
-    torch_nn_module.load_state_dict(torch.load(checkpoint_path))
+    return torch_nn_module.load_state_dict(torch.load(checkpoint_path))
