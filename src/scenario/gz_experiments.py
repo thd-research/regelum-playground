@@ -90,11 +90,11 @@ class SACScenarioWrapper(SACScenario):
             return False
     
     def load_checkpoint(self, experiment_path):
-        self.actor = load_nn_model(self.actor, "actor", experiment_path)
-        self.qf1 = load_nn_model(self.qf1, "qf1", experiment_path)
-        self.qf2 = load_nn_model(self.qf2, "qf2", experiment_path)
-        self.qf1_target = load_nn_model(self.qf1_target, "qf1_target", experiment_path)
-        self.qf2_target = load_nn_model(self.qf2_target, "qf2_target", experiment_path)
+        load_nn_model(self.actor, "actor", experiment_path)
+        load_nn_model(self.qf1, "qf1", experiment_path)
+        load_nn_model(self.qf2, "qf2", experiment_path)
+        load_nn_model(self.qf1_target, "qf1_target", experiment_path)
+        load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
     def save_checkpoint(self):
         save_nn_model(self.actor, "actor")
@@ -205,12 +205,12 @@ class TD3ScenarioWrapper(TD3Scenario):
             super().run(check_learning_start=False)
 
     def load_checkpoint(self, experiment_path):
-        self.actor = load_nn_model(self.actor, "actor", experiment_path)
-        self.actor_target = load_nn_model(self.actor_target, "actor_target", experiment_path)
-        self.qf1 = load_nn_model(self.qf1, "qf1", experiment_path)
-        self.qf2 = load_nn_model(self.qf2, "qf2", experiment_path)
-        self.qf1_target = load_nn_model(self.qf1_target, "qf1_target", experiment_path)
-        self.qf2_target = load_nn_model(self.qf2_target, "qf2_target", experiment_path)
+        load_nn_model(self.actor, "actor", experiment_path)
+        load_nn_model(self.actor_target, "actor_target", experiment_path)
+        load_nn_model(self.qf1, "qf1", experiment_path)
+        load_nn_model(self.qf2, "qf2", experiment_path)
+        load_nn_model(self.qf1_target, "qf1_target", experiment_path)
+        load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
     def save_checkpoint(self):
         save_nn_model(self.actor, "actor")
@@ -410,4 +410,4 @@ def load_nn_model(
     experiment_path: str
 ) -> None:
     checkpoint_path = Path(experiment_path) / ".checkpoint" / name
-    return torch_nn_module.load_state_dict(torch.load(checkpoint_path))
+    torch_nn_module.load_state_dict(torch.load(checkpoint_path))
