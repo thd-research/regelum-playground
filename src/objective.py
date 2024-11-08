@@ -123,6 +123,7 @@ class PushingObjectRunningObjective:
         if position[0] >= 0.85 and reward < 0.6: # cube missed
           truncated=True
           terminated=False
+          print("COND: Cube missed", np.sum(state))
           return reward,truncated,terminated ; 
 
         print("COND: Normal", np.sum(state))
@@ -220,5 +221,5 @@ class RobotPursuitRunningObjective:
             reward = reward*modifier
         
         print("[Objective Function]", info["terminate_cond"])
-              
+
         return reward , truncated, terminated

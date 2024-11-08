@@ -254,8 +254,10 @@ class SACScenario(CleanRLScenario):
                         )
                     ]
                 )
+                self.exploration = True
             else:
-                _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                self.exploration = False
+                actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
                 # actions, _ = self.actor(torch.Tensor(obs).to(self.device))
                 actions = (
                         actions.detach()

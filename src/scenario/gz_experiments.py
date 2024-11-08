@@ -63,7 +63,7 @@ class SACScenarioWrapper(SACScenario):
 
             self.task_name = task_name
             self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
+            super().run()
 
         self.save_checkpoint()
 
@@ -116,7 +116,8 @@ class SACScenarioWrapper(SACScenario):
             "current_value": None,
             "current_undiscounted_value": self.value,
             "task_name": self.task_name if hasattr(self, "task_name") else "",
-            "phase": self.phase
+            "phase": self.phase,
+            "exploration": self.exploration if hasattr(self, "exploration") else False,
         }
 
 class TD3ScenarioWrapper(TD3Scenario):
@@ -183,7 +184,7 @@ class TD3ScenarioWrapper(TD3Scenario):
 
             self.task_name = task_info
             self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
+            super().run()
 
         self.save_checkpoint()
 
@@ -232,7 +233,8 @@ class TD3ScenarioWrapper(TD3Scenario):
             "current_value": None,
             "current_undiscounted_value": self.value,
             "task_name": self.task_name if hasattr(self, "task_name") else "",
-            "phase": self.phase
+            "phase": self.phase,
+            "exploration": self.exploration if hasattr(self, "exploration") else False,
         }
 
 class PushingObjectSACScenario(SACScenarioWrapper):
