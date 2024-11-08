@@ -4,8 +4,9 @@
 controllers=( sac td3 )
 # controllers=( td3 )
 tasks=( run_po_sim.sh run_lf_sim.sh run_rp_sim.sh )
+# tasks=( run_rp_sim.sh )
 reset_replay_buffer=( false ) 
-replay_buffer_size=( 4000 ) 
+replay_buffer_size=( 16000 4000 ) 
 
 ## get item count using ${arrayname[@]} ##
 for c in "${controllers[@]}"; do

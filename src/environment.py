@@ -567,7 +567,7 @@ class RobotPursuit(RgEnv):
             vehicle_prefix='/vehicle',
             world_name='/world/catching_robot_world',
             camera_topic='/vehicle/camera',
-            runner_action=TwistAction('forward',[0.25, 0]),
+            runner_action=TwistAction('forward',[0.2, 0]),
             runner_start_positions=runner_start_positions,
             debug=False
         )
@@ -575,6 +575,7 @@ class RobotPursuit(RgEnv):
         simulator.set_cardinal_directions(self.cardinal_directions)
         simulator.set_manager(env_config)
         simulator.set_arena_bounds(self.arena_bounds)
+
         time.sleep(0.01)
 
     def step(self, action):
@@ -583,7 +584,7 @@ class RobotPursuit(RgEnv):
         )
 
         reward, truncated, terminated = self.running_objective(
-            self._get_state(), 
+            np.copy(self.simulator.state), 
             self._get_robot_pos(), 
             self._get_runner_pos(), 
             action, 
