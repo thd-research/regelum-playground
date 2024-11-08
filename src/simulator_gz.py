@@ -62,7 +62,7 @@ class Robot3Pi(Simulator):
         try:
             self.manager.gz_perform_action_stop()
             time.sleep(0.2)
-            response = self.manager.get_data()
+            response = self.get_observation_response()
             # re-place robot
             self.manager.perform_reset(self.starting_transform.position, self.starting_transform.orientation) ;
             time.sleep(0.5)
@@ -146,7 +146,7 @@ class Robot3Pi(Simulator):
         self.observation = self.state
             # response = self.manager.get_data()
             # self.observation = self.manager.convert_image_msg(response)
-        
+        print("In simulator:", np.sum(self.observation))
         return self.observation
 
 
@@ -189,14 +189,11 @@ class Robot3PiRobotPursuit(Robot3Pi):
         self.manager.trigger_pause(False)
         self.manager.gz_stop_runner()
         self.manager.gz_perform_action_stop()
-        time.sleep(0.2)
-        response = self.manager.get_data()
+        response = self.get_observation_response()
         # re-place robot
         self.manager.perform_reset(self.starting_transform.position, self.starting_transform.orientation) ;
-        response = self.manager.get_data()
-
+        response = self.get_observation_response()
         self.manager.gz_start_runner()
-        time.sleep(0.5)
         self.manager.trigger_pause(True)
         
         # print("response:", response)
@@ -230,6 +227,9 @@ class Robot3PiRobotPursuit(Robot3Pi):
 
     def set_arena_bounds(self, arena_bounds):
         self.arena_bounds = arena_bounds
+
+    def set_cardinal_directions(self, cardinal_directions):
+        self.cardinal_directions = cardinal_directions
 
     def runner_out_of_bounds(self, runner_position:Tuple[float,float,float]):
         if runner_position[1] < self.arena_bounds[0]: # West of the arena

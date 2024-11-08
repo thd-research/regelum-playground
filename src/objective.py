@@ -4,7 +4,7 @@ from typing import Union
 from regelum.utils import rg
 from regelum.model import ModelQuadLin
 
-import matplotlib
+from matplotlib.colors import rgb_to_hsv
 import math
 
 
@@ -90,7 +90,7 @@ class PushingObjectRunningObjective:
         truncated = False
         terminated = False
         c = (state.shape[0] // 2)
-        hsv = matplotlib.colors.rgb_to_hsv(state)
+        hsv = rgb_to_hsv(state)
         h = hsv[:,:,0]
         s = hsv[:,:,1]
         v = hsv[:,:,2]
@@ -125,7 +125,7 @@ class PushingObjectRunningObjective:
           terminated=False
           return reward,truncated,terminated ; 
 
-        print("COND: Normal")
+        print("COND: Normal", np.sum(state))
         modifier = 0.1 if all(np.isclose(action, np.zeros_like(action))) else 1.0 ; # punish stop action
         
         return reward * modifier, truncated, terminated
@@ -172,7 +172,7 @@ class RobotPursuitRunningObjective:
         truncated = False
         terminated = False
         c = (state.shape[0] // 2)
-        hsv = matplotlib.colors.rgb_to_hsv(state)
+        hsv = rgb_to_hsv(state)
         h = hsv[:,:,0]
         s = hsv[:,:,1]
         v = hsv[:,:,2]

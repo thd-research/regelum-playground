@@ -215,13 +215,37 @@ class SACScenario(CleanRLScenario):
         else:
             self.alpha = alpha
 
-    def run(self):
+    @apply_callbacks()
+    def post_compute_action(self, state, obs, action, reward, time, global_step):
+        self.current_running_objective = reward
+        self.value += reward
+        return {
+            "estimated_state": state,
+            "observation": obs,
+            "time": time,
+            "episode_id": self.episode_id,
+            "iteration_id": self.iteration_id,
+            "step_id": global_step,
+            "action": action,
+            "running_objective": reward,
+            "current_value": None,
+            "current_undiscounted_value": self.value,
+            "task_name": self.task_name if hasattr(self, "task_name") else ""
+        }
+    
+    def meet_stop_condition(self):
+        return False
+    
+    def run(self, check_learning_start=True):
         start_debug = True
 
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
+            if self.meet_stop_condition():
+                break
+
             # ALGO LOGIC: put action logic here
-            if global_step < self.learning_starts:
+            if check_learning_start and global_step < self.learning_starts:
                 actions = np.array(
                     [
                         np.random.uniform(
@@ -231,8 +255,13 @@ class SACScenario(CleanRLScenario):
                     ]
                 )
             else:
-                actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
-                actions = actions.detach().cpu().numpy()
+                _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                # actions, _ = self.actor(torch.Tensor(obs).to(self.device))
+                actions = (
+                        actions.detach()
+                        .numpy()
+                        .clip(self.action_bounds[:, 0], self.action_bounds[:, 1])
+                    )
 
             self.state = self.envs.envs[0].env.state.reshape(1, -1)
             self.time = self.envs.envs[0].env.simulator.time
@@ -272,7 +301,8 @@ class SACScenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if global_step > self.learning_starts:
+            if (not check_learning_start and self.rb.buffer_size) or \
+                    (check_learning_start and global_step > self.learning_starts):
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     next_state_actions, next_state_log_pi, _ = self.actor.get_action(

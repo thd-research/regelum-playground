@@ -171,11 +171,36 @@ class TD3Scenario(CleanRLScenario):
             handle_timeout_termination=False,
         )
 
-    def run(self):
+    @apply_callbacks()
+    def post_compute_action(self, state, obs, action, reward, time, global_step):
+        self.current_running_objective = reward
+        self.value += reward
+        return {
+            "estimated_state": state,
+            "observation": obs,
+            "time": time,
+            "episode_id": self.episode_id,
+            "iteration_id": self.iteration_id,
+            "step_id": global_step,
+            "action": action,
+            "running_objective": reward,
+            "current_value": None,
+            "current_undiscounted_value": self.value,
+            "task_name": self.task_name if hasattr(self, "task_name") else ""
+        }
+
+    def meet_stop_condition(self):
+        return False
+    
+    def run(self,
+            check_learning_start=True):
         obs, _ = self.envs.reset()
         for global_step in range(self.total_timesteps):
+            if self.meet_stop_condition():
+                break
+            
             # ALGO LOGIC: put action logic here
-            if global_step < self.learning_starts:
+            if check_learning_start and global_step < self.learning_starts:
                 actions = np.array(
                     [
                         np.random.uniform(
@@ -187,9 +212,9 @@ class TD3Scenario(CleanRLScenario):
             else:
                 with torch.no_grad():
                     actions = self.actor(torch.Tensor(obs).to(self.device))
-                    actions += torch.normal(
-                        0, self.actor.action_scale * self.exploration_noise
-                    )
+                    # actions += torch.normal(
+                    #     0, self.actor.action_scale * self.exploration_noise
+                    # )
                     actions = (
                         actions.cpu()
                         .numpy()
@@ -221,6 +246,7 @@ class TD3Scenario(CleanRLScenario):
                     self.reload_scenario()
                     self.reset_episode()
                     self.reset_iteration()
+                    break
 
             # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
             real_next_obs = next_obs.copy()
@@ -233,7 +259,8 @@ class TD3Scenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if global_step > self.learning_starts:
+            if (not check_learning_start and self.rb.buffer_size) or \
+                    (check_learning_start and global_step > self.learning_starts):
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     clipped_noise = (
