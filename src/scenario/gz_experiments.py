@@ -47,25 +47,28 @@ class SACScenarioWrapper(SACScenario):
                          env)
         self.reset_rb_each_task = reset_rb_each_task
         self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "3"))
+        self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
         if checkpoint_dirpath is not None:
             self.checkpoint_dirpath = checkpoint_dirpath
 
     def run(self):
         if hasattr(self, "checkpoint_dirpath"):
+            print("Model Loaded", self.checkpoint_dirpath)
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
-        for id, task_name in enumerate(self.envs.envs[0].env.task_list):
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
+        if not self.eval_only:
+            self.phase = "train"
+            for id, task_name in enumerate(self.envs.envs[0].env.task_list):
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-            self.task_name = task_name
-            self.envs.envs[0].env.switch_task(id)
-            super().run()
+                self.task_name = task_name
+                self.envs.envs[0].env.switch_task(id)
+                super().run()
 
-        self.save_checkpoint()
+            self.save_checkpoint()
 
         self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
@@ -173,20 +176,21 @@ class TD3ScenarioWrapper(TD3Scenario):
         if hasattr(self, "checkpoint_dirpath"):
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
+        if not self.eval_only:
+            self.phase = "train"
 
-        for id, task_info in enumerate(self.envs.envs[0].env.task_list):
-            print("task_info:", task_info)
+            for id, task_info in enumerate(self.envs.envs[0].env.task_list):
+                print("task_info:", task_info)
 
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-            self.task_name = task_info
-            self.envs.envs[0].env.switch_task(id)
-            super().run()
+                self.task_name = task_info
+                self.envs.envs[0].env.switch_task(id)
+                super().run()
 
-        self.save_checkpoint()
+            self.save_checkpoint()
 
         self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
