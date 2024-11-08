@@ -78,7 +78,7 @@ class SACScenarioWrapper(SACScenario):
             # set total_timesteps and learning_start as inf to prevent actor from gradient descent
             self.learning_starts = self.total_timesteps = int(1e6)
             self.next_iter_max = self.evaluation_episode_number + self.iteration_id
-            super().run(check_learning_start=True)
+            super().run(check_learning_start=False)
 
     def meet_stop_condition(self):
         if self.phase == "eval":
@@ -198,7 +198,7 @@ class TD3ScenarioWrapper(TD3Scenario):
             # set total_timesteps and learning_start as inf to prevent actor from gradient descent
             self.learning_starts = self.total_timesteps = int(1e6)
             self.next_iter_max = self.evaluation_episode_number + self.iteration_id
-            super().run(check_learning_start=True)
+            super().run(check_learning_start=False)
 
     def load_checkpoint(self, experiment_path):
         load_nn_model(self.actor, "actor", experiment_path)
