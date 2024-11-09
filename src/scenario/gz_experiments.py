@@ -162,6 +162,7 @@ class TD3ScenarioWrapper(TD3Scenario):
         
         self.reset_rb_each_task = reset_rb_each_task
         self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "3"))
+        self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
         if checkpoint_dirpath is not None:
             self.checkpoint_dirpath = checkpoint_dirpath
