@@ -55,6 +55,7 @@ class GZHistoricalDataCallback(HistoricalDataCallback):
                         "task_name": output["task_name"],
                         "step_id": output["step_id"],
                         "phase": output["phase"],
+                        "exploration": output["exploration"],
                     },
                     **dict(zip(self.action_components_naming, output["action"][0])),
                     **dict(
