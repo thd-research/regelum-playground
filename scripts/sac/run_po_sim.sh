@@ -134,8 +134,8 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.policy_lr=0.00079 \
     scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
-    scenario.learning_starts=400 \
-    scenario.total_timesteps=4000 \
+    scenario.learning_starts=700 \
+    scenario.total_timesteps=5000 \
     scenario.buffer_size=${BUFFER_SIZE} \
     scenario.reset_rb_each_task=${BUFFER_RESET} \
     +seed=42 \

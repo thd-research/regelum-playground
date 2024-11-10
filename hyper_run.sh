@@ -1,7 +1,8 @@
 #!/bin/bash
  
 ## define an array with three items ##
-controllers=( sac td3 )
+# controllers=( sac td3 )
+controllers=( td3 )
 # controllers=( td3 )
 tasks=( run_po_sim.sh run_lf_sim.sh run_rp_sim.sh )
 # tasks=( run_rp_sim.sh )
