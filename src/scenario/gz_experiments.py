@@ -121,6 +121,7 @@ class SACScenarioWrapper(SACScenario):
             "task_name": self.task_name if hasattr(self, "task_name") else "",
             "phase": self.phase,
             "exploration": self.exploration if hasattr(self, "exploration") else False,
+            "robot_position": self.simulator.manager.get_position(),
         }
 
 class TD3ScenarioWrapper(TD3Scenario):

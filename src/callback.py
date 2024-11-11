@@ -56,6 +56,7 @@ class GZHistoricalDataCallback(HistoricalDataCallback):
                         "step_id": output["step_id"],
                         "phase": output["phase"],
                         "exploration": output["exploration"],
+                        "robot_position": output["robot_position"],
                     },
                     **dict(zip(self.action_components_naming, output["action"][0])),
                     **dict(

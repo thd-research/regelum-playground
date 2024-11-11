@@ -77,7 +77,7 @@ function execute_state {
 # *------------ COMMON DEFINITIONS ----------------------
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
-BUFFER_SIZE=16000
+BUFFER_SIZE=20000
 echo ARGS $#
 if [ "$#" == "1" ] ; then
 BUFFER_RESET=${1}
@@ -131,8 +131,8 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     system=3wrobot_pushing_object \
     running_objective=3wrobot_pushing_object \
     scenario.autotune=False \
-    scenario.policy_lr=0.00079 \
-    scenario.q_lr=0.00025 \
+    scenario.policy_lr=0.001 \
+    scenario.q_lr=0.001 \
     scenario.alpha=0.0085 \
     scenario.learning_starts=700 \
     scenario.total_timesteps=5000 \

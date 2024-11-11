@@ -11,7 +11,7 @@ batch_size: 256
 learning_starts: 1000
 policy_lr: 3.0e-4
 q_lr: 1.0e-3
-policy_frequency: 1
+policy_frequency: 20
 target_network_frequency: 100
 alpha: 0.5
 autotune: True
