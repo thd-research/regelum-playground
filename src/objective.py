@@ -126,8 +126,8 @@ class PushingObjectRunningObjective:
           print("COND: Cube missed", np.sum(state))
           return reward,truncated,terminated ; 
 
-        print("COND: Normal", np.sum(state))
-        modifier = 0.1 if all(np.isclose(action, np.zeros_like(action))) else 1.0 ; # punish stop action
+        print("COND: Normal", np.sum(state), "Action:", action)
+        modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
         
         return reward * modifier, truncated, terminated
     
