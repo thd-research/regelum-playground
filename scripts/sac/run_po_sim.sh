@@ -131,10 +131,10 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     system=3wrobot_pushing_object \
     running_objective=3wrobot_pushing_object \
     scenario.autotune=False \
-    scenario.policy_lr=0.001 \
-    scenario.q_lr=0.001 \
+    scenario.policy_lr=0.00079 \
+    scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
-    scenario.learning_starts=700 \
+    scenario.learning_starts=250 \
     scenario.total_timesteps=5000 \
     scenario.buffer_size=${BUFFER_SIZE} \
     scenario.reset_rb_each_task=${BUFFER_RESET} \
