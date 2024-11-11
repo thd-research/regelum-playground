@@ -134,8 +134,8 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.alpha=0.0085 \
     scenario.learning_starts=250 \
     scenario.total_timesteps=5000 \
-    scenario.buffer_size=${BUFFER_SIZE} \
-    scenario.reset_rb_each_task=${BUFFER_RESET} \
+    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2024-11-11/11-51-46/0" \
+    scenario.evaluation_only=true \
     +seed=42 \
     --experiment=sac_lf
 
@@ -143,7 +143,7 @@ echo DONE
 
 # kill zombies
 sleep 5s
-execute_watchout
+# execute_watchout
 
 #ps -ef | grep gz
 
