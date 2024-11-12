@@ -292,7 +292,8 @@ class LineFollowingSACScenario(SACScenarioWrapper):
 
 
 class RobotPursuitSACScenario(SACScenarioWrapper):
-    def __init__(self, simulator, running_objective, device="cuda:0", total_timesteps=1000000, buffer_size=1000000, gamma=0.99, tau=0.005, batch_size=256, learning_starts=5000, policy_lr=0.0003, q_lr=0.001, policy_frequency=2, target_network_frequency=1, alpha=0.2, autotune=True, reset_rb_each_task=False, checkpoint_dirpath=None, env=...):
+    def __init__(self, simulator, running_objective, device="cuda:0", total_timesteps=1000000, buffer_size=1000000, gamma=0.99, tau=0.005, batch_size=256, learning_starts=5000, policy_lr=0.0003, q_lr=0.001, policy_frequency=2, target_network_frequency=1, alpha=0.2, autotune=True, reset_rb_each_task=False, checkpoint_dirpath=None, 
+                 env=..., **kwargs):
         super().__init__(simulator, 
                         running_objective, 
                         device, 
@@ -310,7 +311,8 @@ class RobotPursuitSACScenario(SACScenarioWrapper):
                         autotune, 
                         reset_rb_each_task, 
                         checkpoint_dirpath, 
-                        RobotPursuit)
+                        RobotPursuit,
+                        **kwargs)
 
 
 class PushingObjectTD3Scenario(TD3ScenarioWrapper):
