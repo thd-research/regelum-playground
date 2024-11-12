@@ -91,6 +91,7 @@ class Actor(nn.Module):
         )
 
     def forward(self, x):
+        x = np.clip(x * 1.5 / 255 + 30 / 255, 0, 1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
