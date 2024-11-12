@@ -127,7 +127,8 @@ class PushingObjectRunningObjective:
           return reward,truncated,terminated ; 
 
         print("COND: Normal", np.sum(state), "Action:", action)
-        modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
+        # modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
+        modifier = 0 if action[0] < 1 or action[1] < 10 else 1.0 ; # punish stop action
         
         return reward * modifier, truncated, terminated
     
@@ -217,7 +218,7 @@ class RobotPursuitRunningObjective:
             reward = -10
         else:
             info["terminate_cond"] = f"COND: Normal, REWARD: {reward}"
-            modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
+            modifier = 0 if action[0] < 1 or action[1] < 10 else 1.0 ; # punish stop action
             reward = reward*modifier
         
         print("[Objective Function]", info["terminate_cond"])
