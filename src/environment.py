@@ -567,7 +567,7 @@ class RobotPursuit(RgEnv):
             vehicle_prefix='/vehicle',
             world_name='/world/catching_robot_world',
             camera_topic='/vehicle/camera',
-            runner_action=TwistAction('forward',[0.2, 0]),
+            runner_action=TwistAction('forward',[0.25, 0]),
             runner_start_positions=runner_start_positions,
             debug=False
         )
