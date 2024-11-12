@@ -217,7 +217,7 @@ class RobotPursuitRunningObjective:
             reward = -10
         else:
             info["terminate_cond"] = f"COND: Normal, REWARD: {reward}"
-            modifier = 0.1 if all(np.isclose(action, np.zeros_like(action))) else 1.0 ; # punish stop action
+            modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
             reward = reward*modifier
         
         print("[Objective Function]", info["terminate_cond"])
