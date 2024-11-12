@@ -117,8 +117,8 @@ execute_watchout
 
 
 # start gazebo
-# sim_options=" -r -s --headless-rendering --render-engine ogre2"
-sim_options=" -r --render-engine ogre2"
+sim_options=" -r -s --headless-rendering --render-engine ogre2"
+# sim_options=" -r --render-engine ogre2"
 gz sim ${sim_options} "${ROOT_PATH}/models/catching_robot.sdf"  &
 
 # debug

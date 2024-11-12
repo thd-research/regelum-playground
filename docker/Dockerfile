@@ -65,7 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY ../requirements.txt /requirements.txt
-RUN python3 -m pip install --force-reinstall -r /requirements.txt
+RUN python3 -m pip install --no-cache-dir --force-reinstall -r /requirements.txt
 
 COPY ../dev-requirements.txt /dev-requirements.txt
 RUN python3 -m pip install -r /dev-requirements.txt
