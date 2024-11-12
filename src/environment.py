@@ -437,7 +437,7 @@ class LineFollowing(RgEnv):
                  running_objective, 
                  action_space = None, 
                  observation_space = None,
-                 task_list = ["circle_red", "circle_green", "circle_blue", "circle_yellow"]):
+                 task_list = ["circle_red", "circle_blue", "circle_green", "circle_yellow"]):
         
         print("simulator:", simulator)
         assert hasattr(simulator, "set_manager")

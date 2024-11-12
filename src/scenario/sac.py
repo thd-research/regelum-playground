@@ -91,7 +91,7 @@ class Actor(nn.Module):
         )
 
     def forward(self, x):
-        x = np.clip(x * 1.5 / 255 + 30 / 255, 0, 1)
+        x = np.clip(x * 1.5 / 255 + 0 / 255, 0, 1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
@@ -258,7 +258,10 @@ class SACScenario(CleanRLScenario):
                 self.exploration = True
             else:
                 self.exploration = False
-                actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                if self.phase == "train":
+                    actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                else:
+                     _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
                 # actions, _ = self.actor(torch.Tensor(obs).to(self.device))
                 actions = (
                         actions.detach()

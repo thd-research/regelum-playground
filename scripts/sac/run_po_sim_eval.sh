@@ -128,7 +128,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.policy_lr=0.00079 \
     scenario.q_lr=0.00025 \
     scenario.alpha=0.0085 \
-    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2024-11-11/15-25-33/0" \
+    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2024-11-11/19-06-15/0" \
     scenario.evaluation_only=true \
     scenario.buffer_size=16000 \
     scenario.reset_rb_each_task=true \
