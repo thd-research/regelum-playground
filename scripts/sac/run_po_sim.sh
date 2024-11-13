@@ -78,6 +78,7 @@ function execute_state {
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
 BUFFER_SIZE=20000
+BUFFER_RESET=false
 echo ARGS $#
 if [ "$#" == "1" ] ; then
 BUFFER_RESET=${1}

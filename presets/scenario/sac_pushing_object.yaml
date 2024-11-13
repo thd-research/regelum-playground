@@ -18,3 +18,4 @@ autotune: True
 evaluation_only: False
 reset_rb_each_task: False
 checkpoint_dirpath: null
+evaluation_episode_number: 30

@@ -58,24 +58,10 @@ class SACScenarioWrapper(SACScenario):
             print("Model Loaded", self.checkpoint_dirpath)
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        if not self.eval_only:
-            self.phase = "train"
-            for id, task_name in enumerate(self.envs.envs[0].env.task_list):
-                # reset replay buffer
-                if self.reset_rb_each_task:
-                    self.rb.reset()
-
-                self.task_name = task_name
-                self.envs.envs[0].env.switch_task(id)
-                super().run()
-
-            self.save_checkpoint()
-
+        task_list = self.envs.envs[0].env.task_list
+        if self.eval_only:
             self.phase = "eval"
-            for eval_id, eval_task_info in enumerate(self.envs.envs[0].env.task_list):
-                if eval_id > id:
-                    break
-
+            for eval_id, eval_task_info in enumerate(task_list):
                 print("Eval task_info:", eval_task_info)
 
                 self.task_name = eval_task_info
@@ -83,14 +69,43 @@ class SACScenarioWrapper(SACScenario):
 
                 # check_learning_start=True -> use policy to update action at the beginning
                 # set total_timesteps and learning_start as inf to prevent actor from gradient descent
-                learning_starts_backup = copy(self.learning_starts)
-                total_timesteps_backup = copy(self.total_timesteps)
                 self.learning_starts = self.total_timesteps = int(1e6)
                 self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
                 super().run(check_learning_start=False, buffer_update=False)
+        else:
+            
+            for train_id, task_name in enumerate(task_list):
+                self.phase = "train"
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-                self.learning_starts = learning_starts_backup
-                self.total_timesteps = total_timesteps_backup
+                self.task_name = task_name
+                self.envs.envs[0].env.switch_task(train_id)
+                super().run()
+
+                self.save_checkpoint(train_id)
+
+                self.phase = "eval"
+                for eval_id, eval_task_info in enumerate(self.envs.envs[0].env.task_list):
+                    if eval_id > train_id:
+                        break
+
+                    print("Eval task_info:", eval_task_info, eval_id, train_id)
+
+                    self.task_name = eval_task_info
+                    self.envs.envs[0].env.switch_task(eval_id)
+
+                    # check_learning_start=True -> use policy to update action at the beginning
+                    # set total_timesteps and learning_start as inf to prevent actor from gradient descent
+                    learning_starts_backup = copy(self.learning_starts)
+                    total_timesteps_backup = copy(self.total_timesteps)
+                    self.learning_starts = self.total_timesteps = int(1e6)
+                    self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
+                    super().run(check_learning_start=False, buffer_update=False)
+
+                    self.learning_starts = learning_starts_backup
+                    self.total_timesteps = total_timesteps_backup
 
     def meet_stop_condition(self):
         if self.phase == "eval":
@@ -105,7 +120,13 @@ class SACScenarioWrapper(SACScenario):
         load_nn_model(self.qf1_target, "qf1_target", experiment_path)
         load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, id):
+        save_nn_model(self.actor, f"actor_{id}")
+        save_nn_model(self.qf1, f"qf1_{id}")
+        save_nn_model(self.qf2, f"qf2_{id}")
+        save_nn_model(self.qf1_target, f"qf1_target_{id}")
+        save_nn_model(self.qf2_target, f"qf2_target_{id}")
+    
         save_nn_model(self.actor, "actor")
         save_nn_model(self.qf1, "qf1")
         save_nn_model(self.qf2, "qf2")
