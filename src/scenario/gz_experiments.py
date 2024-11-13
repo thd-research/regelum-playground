@@ -76,7 +76,7 @@ class SACScenarioWrapper(SACScenario):
                 if eval_id > id:
                     break
 
-                print("task_info:", eval_task_info)
+                print("Eval task_info:", eval_task_info)
 
                 self.task_name = eval_task_info
                 self.envs.envs[0].env.switch_task(eval_id)
