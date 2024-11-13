@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 import os
 import numpy as np
+from copy import copy
 
 
 class SACScenarioWrapper(SACScenario):
@@ -70,18 +71,26 @@ class SACScenarioWrapper(SACScenario):
 
             self.save_checkpoint()
 
-        self.phase = "eval"
-        for id, task_info in enumerate(self.envs.envs[0].env.task_list):
-            print("task_info:", task_info)
+            self.phase = "eval"
+            for eval_id, eval_task_info in enumerate(self.envs.envs[0].env.task_list):
+                if eval_id > id:
+                    break
 
-            self.task_name = task_info
-            self.envs.envs[0].env.switch_task(id)
+                print("task_info:", eval_task_info)
 
-            # check_learning_start=True -> use policy to update action at the beginning
-            # set total_timesteps and learning_start as inf to prevent actor from gradient descent
-            self.learning_starts = self.total_timesteps = int(1e6)
-            self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
-            super().run(check_learning_start=False)
+                self.task_name = eval_task_info
+                self.envs.envs[0].env.switch_task(eval_id)
+
+                # check_learning_start=True -> use policy to update action at the beginning
+                # set total_timesteps and learning_start as inf to prevent actor from gradient descent
+                learning_starts_backup = copy(self.learning_starts)
+                total_timesteps_backup = copy(self.total_timesteps)
+                self.learning_starts = self.total_timesteps = int(1e6)
+                self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
+                super().run(check_learning_start=False, buffer_update=False)
+
+                self.learning_starts = learning_starts_backup
+                self.total_timesteps = total_timesteps_backup
 
     def meet_stop_condition(self):
         if self.phase == "eval":

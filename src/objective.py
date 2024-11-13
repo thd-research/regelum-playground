@@ -128,8 +128,6 @@ class PushingObjectRunningObjective:
 
         print("COND: Normal", np.sum(state), "Action:", action)
         modifier = 0 if action[0] < 1 else 1.0 ; # punish stop action
-        if 0.2 < abs(action[1]) < 10:
-            modifier = 0
         
         return reward * modifier, truncated, terminated
     

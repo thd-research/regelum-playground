@@ -237,7 +237,7 @@ class SACScenario(CleanRLScenario):
     def meet_stop_condition(self):
         return False
     
-    def run(self, check_learning_start=True):
+    def run(self, check_learning_start=True, buffer_update=True):
         start_debug = True
 
         obs, _ = self.envs.reset()
@@ -302,7 +302,9 @@ class SACScenario(CleanRLScenario):
             for idx, trunc in enumerate(truncations):
                 if trunc:
                     real_next_obs[idx] = infos["final_observation"][idx]
-            self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
+
+            if buffer_update:
+                self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
 
