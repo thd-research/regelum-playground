@@ -11,6 +11,9 @@ from utils.load_config import (
     load_exp_config
     )
 
+from glob import glob
+from yaml import safe_load
+
 
 ROOT_DIR = "./regelum_data/outputs/"
 
@@ -146,3 +149,62 @@ def get_df_from_datetime_range(start_datetime_str,
     total_df.to_pickle(bk_path)
     
     return total_df
+
+def get_mlruns_info(start_datetime_str, 
+                    end_datetime_str,
+                    date_format='%Y-%m-%d %H-%M-%S',
+                    backup_dir="./backup-data",
+                    reload=False):
+    
+    backup_file_name = "_".join([c.replace(" ", "_") for c in ["mlruns_actorloss_", start_datetime_str, end_datetime_str]]) + ".pkl"
+    bk_path = os.path.join(backup_dir, backup_file_name)
+
+    if not reload and os.path.exists(bk_path):
+        return pd.read_pickle(bk_path)
+
+    MLRUN_DIR = "./regelum_data/mlruns"
+    mlruns_yaml_files = glob(f"{MLRUN_DIR}/**/*.yaml", recursive=True)
+    mlruns_folder_info = {}
+
+    for fp in mlruns_yaml_files:
+        with open(fp, "r") as f:
+            data = safe_load(f)
+
+        if not isinstance(data, dict):
+            continue
+
+        if "run_id" in data.keys():
+            mlruns_folder_info[data["run_name"]] = os.path.join(MLRUN_DIR, data["experiment_id"], data["run_id"])
+
+    start_date_time = datetime.strptime(start_datetime_str, date_format)
+    end_date_time = datetime.strptime(end_datetime_str, date_format)
+
+    date_folder = os.listdir(ROOT_DIR)
+
+    valid_path = None
+    for d in date_folder:
+        for t in os.listdir(os.path.join(ROOT_DIR, d)):
+            tmp_datetime = datetime.strptime(f"{d} {t}", date_format)
+            if tmp_datetime < start_date_time or end_date_time < tmp_datetime:
+                continue
+
+            valid_path = str(pathlib.Path(os.path.join(ROOT_DIR, d, t)).absolute())
+            break
+        if valid_path is not None:
+            break
+
+    if valid_path is None:
+        return pd.DataFrame()
+    
+    run_name = "{} {} 0".format(*pathlib.PurePath(valid_path).parts[-2:])
+    actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
+    if not os.path.exists(actor_loss_path):
+        raise FileNotFoundError
+    
+    step_info = pd.read_table(actor_loss_path, delimiter=" ", names=["time", "actor_loss", "step_id"])
+    step_info["run_name"] = run_name
+
+    os.makedirs(backup_dir, exist_ok=True)
+    step_info.to_pickle(bk_path)
+
+    return step_info
