@@ -78,14 +78,15 @@ def get_df_from_datetime_range(start_datetime_str,
                                decay_rate=1,
                                max_iter=100,
                                reload=False,
-                               validity_check=True
+                               validity_check=True,
+                               backup_dir="./backup-data"
                                ):
     start_date_time = datetime.strptime(start_datetime_str, date_format)
     end_date_time = datetime.strptime(end_datetime_str, date_format)
     
 
     backup_file_name = "_".join([c.replace(" ", "_") for c in ["data", start_datetime_str, end_datetime_str]]) + ".pkl"
-    bk_path = os.path.join("./backup-data", backup_file_name)
+    bk_path = os.path.join(backup_dir, backup_file_name)
 
     if not reload and os.path.exists(bk_path):
         return pd.read_pickle(bk_path)
@@ -141,7 +142,7 @@ def get_df_from_datetime_range(start_datetime_str,
     # Post process
     total_df = total_df[total_df.iteration_id <= max_iter]
 
-    os.makedirs("./backup-data", exist_ok=True)
+    os.makedirs(backup_dir, exist_ok=True)
     total_df.to_pickle(bk_path)
     
     return total_df
