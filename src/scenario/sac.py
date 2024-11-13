@@ -398,5 +398,9 @@ class SACScenario(CleanRLScenario):
                         )
         
                 # Save model weight
+        
+        self.reload_scenario()
+        self.reset_episode()
+        self.reset_iteration()
         self.envs.close()
         print("Env closed")
