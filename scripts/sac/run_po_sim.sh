@@ -79,6 +79,7 @@ SRC_PATH=""
 PROJECT_DIR="regelum-playground"
 BUFFER_SIZE=20000
 BUFFER_RESET=false
+SEED=42
 echo ARGS $#
 if [ "$#" == "1" ] ; then
 BUFFER_RESET=${1}
@@ -88,6 +89,12 @@ then
 BUFFER_RESET=${1}
 BUFFER_SIZE=${2}
 echo "BUFFER_RESET:" ${BUFFER_RESET} " BUFFER_RESET:" ${BUFFER_SIZE}
+elif [ "$#" == "3" ]
+then
+BUFFER_RESET=${1}
+BUFFER_SIZE=${2}
+SEED=${3}
+echo "BUFFER_RESET:" ${BUFFER_RESET} " BUFFER_RESET:" ${BUFFER_SIZE} " SEED:" ${SEED}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
 # *-------------------------------------------------------
@@ -139,7 +146,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.total_timesteps=5000 \
     scenario.buffer_size=${BUFFER_SIZE} \
     scenario.reset_rb_each_task=${BUFFER_RESET} \
-    +seed=42 \
+    +seed=${SEED} \
     --experiment=sac_po
 
 echo DONE
