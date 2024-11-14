@@ -13,8 +13,7 @@ class ThreeWheelLineFollowing(System):
     # _observation_naming = _state_naming = ["angle [rad]", "angular velocity [rad/s]"]
     _observation_naming = _state_naming = [f"Image pixel {i}" for i in range(_dim_observation)]
     _inputs_naming = ["Linear Velocity [m/s]", "Angular Velocity [rad/s]"]
-    _action_bounds = [[0.0, 0.5], [-1.57, 1.57]] # m/s and rad/s
-
+    _action_bounds = [[0.2, 0.2], [-1.57, 1.57]] # m/s and rad/s
     def __init__(self, system_parameters_init = None, state_init = None, inputs_init = None):
         super().__init__(system_parameters_init, state_init, inputs_init)
 
@@ -31,7 +30,7 @@ class ThreeWheelPushingObject(System):
     # _observation_naming = _state_naming = ["angle [rad]", "angular velocity [rad/s]"]
     _observation_naming = _state_naming = [f"Image pixel {i}" for i in range(1200)]
     _inputs_naming = ["Linear Velocity [m/s]", "Angular Velocity [rad/s]"]
-    _action_bounds = [[0.0, 0.5], [-1.57, 1.57]] # m/s and rad/s
+    _action_bounds = [[0.0, 1.2], [-16, 16]] # m/s and rad/s
 
     def __init__(self, system_parameters_init = None, state_init = None, inputs_init = None):
         super().__init__(system_parameters_init, state_init, inputs_init)

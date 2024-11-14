@@ -209,7 +209,9 @@ class TD3Scenario(CleanRLScenario):
                         )
                     ]
                 )
+                self.exploration = True
             else:
+                self.exploration = False
                 with torch.no_grad():
                     actions = self.actor(torch.Tensor(obs).to(self.device))
                     # actions += torch.normal(
@@ -259,8 +261,10 @@ class TD3Scenario(CleanRLScenario):
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if (not check_learning_start and self.rb.buffer_size) or \
-                    (check_learning_start and global_step > self.learning_starts):
+            if  self.phase == "train" and (
+                    (not check_learning_start and self.rb.buffer_size) or \
+                    (check_learning_start and global_step > self.learning_starts)
+                    ):
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     clipped_noise = (

@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 import os
 import numpy as np
+from copy import copy
 
 
 class SACScenarioWrapper(SACScenario):
@@ -46,39 +47,65 @@ class SACScenarioWrapper(SACScenario):
                          autotune, 
                          env)
         self.reset_rb_each_task = reset_rb_each_task
-        self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "3"))
+        self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "30"))
+        self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
         if checkpoint_dirpath is not None:
             self.checkpoint_dirpath = checkpoint_dirpath
 
     def run(self):
         if hasattr(self, "checkpoint_dirpath"):
+            print("Model Loaded", self.checkpoint_dirpath)
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
-        for id, task_name in enumerate(self.envs.envs[0].env.task_list):
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
+        task_list = self.envs.envs[0].env.task_list
+        if self.eval_only:
+            self.phase = "eval"
+            for eval_id, eval_task_info in enumerate(task_list):
+                print("Eval task_info:", eval_task_info)
 
-            self.task_name = task_name
-            self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
+                self.task_name = eval_task_info
+                self.envs.envs[0].env.switch_task(eval_id)
 
-        self.save_checkpoint()
+                # check_learning_start=True -> use policy to update action at the beginning
+                # set total_timesteps and learning_start as inf to prevent actor from gradient descent
+                self.learning_starts = self.total_timesteps = int(1e6)
+                self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
+                super().run(check_learning_start=False, buffer_update=False)
+        else:
+            
+            for train_id, task_name in enumerate(task_list):
+                self.phase = "train"
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
 
-        self.phase = "eval"
-        for id, task_info in enumerate(self.envs.envs[0].env.task_list):
-            print("task_info:", task_info)
+                self.task_name = task_name
+                self.envs.envs[0].env.switch_task(train_id)
+                super().run()
 
-            self.task_name = task_info
-            self.envs.envs[0].env.switch_task(id)
+                self.save_checkpoint(train_id)
 
-            # check_learning_start=True -> use policy to update action at the beginning
-            # set total_timesteps and learning_start as inf to prevent actor from gradient descent
-            self.learning_starts = self.total_timesteps = int(1e6)
-            self.next_iter_max = self.evaluation_episode_number + self.iteration_id
-            super().run(check_learning_start=False)
+                self.phase = "eval"
+                for eval_id, eval_task_info in enumerate(self.envs.envs[0].env.task_list):
+                    if eval_id > train_id:
+                        break
+
+                    print("Eval task_info:", eval_task_info, eval_id, train_id)
+
+                    self.task_name = eval_task_info
+                    self.envs.envs[0].env.switch_task(eval_id)
+
+                    # check_learning_start=True -> use policy to update action at the beginning
+                    # set total_timesteps and learning_start as inf to prevent actor from gradient descent
+                    learning_starts_backup = copy(self.learning_starts)
+                    total_timesteps_backup = copy(self.total_timesteps)
+                    self.learning_starts = self.total_timesteps = int(1e6)
+                    self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
+                    super().run(check_learning_start=False, buffer_update=False)
+
+                    self.learning_starts = learning_starts_backup
+                    self.total_timesteps = total_timesteps_backup
 
     def meet_stop_condition(self):
         if self.phase == "eval":
@@ -93,7 +120,13 @@ class SACScenarioWrapper(SACScenario):
         load_nn_model(self.qf1_target, "qf1_target", experiment_path)
         load_nn_model(self.qf2_target, "qf2_target", experiment_path)
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, id):
+        save_nn_model(self.actor, f"actor_{id}")
+        save_nn_model(self.qf1, f"qf1_{id}")
+        save_nn_model(self.qf2, f"qf2_{id}")
+        save_nn_model(self.qf1_target, f"qf1_target_{id}")
+        save_nn_model(self.qf2_target, f"qf2_target_{id}")
+    
         save_nn_model(self.actor, "actor")
         save_nn_model(self.qf1, "qf1")
         save_nn_model(self.qf2, "qf2")
@@ -116,7 +149,9 @@ class SACScenarioWrapper(SACScenario):
             "current_value": None,
             "current_undiscounted_value": self.value,
             "task_name": self.task_name if hasattr(self, "task_name") else "",
-            "phase": self.phase
+            "phase": self.phase,
+            "exploration": self.exploration if hasattr(self, "exploration") else False,
+            "robot_position": self.simulator.manager.get_position(),
         }
 
 class TD3ScenarioWrapper(TD3Scenario):
@@ -158,6 +193,7 @@ class TD3ScenarioWrapper(TD3Scenario):
         
         self.reset_rb_each_task = reset_rb_each_task
         self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "3"))
+        self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
         if checkpoint_dirpath is not None:
             self.checkpoint_dirpath = checkpoint_dirpath
@@ -172,20 +208,34 @@ class TD3ScenarioWrapper(TD3Scenario):
         if hasattr(self, "checkpoint_dirpath"):
             self.load_checkpoint(self.checkpoint_dirpath)
         
-        self.phase = "train"
+        if not self.eval_only:
+            self.phase = "train"
 
+            for id, task_info in enumerate(self.envs.envs[0].env.task_list):
+                print("task_info:", task_info)
+
+                # reset replay buffer
+                if self.reset_rb_each_task:
+                    self.rb.reset()
+
+                self.task_name = task_info
+                self.envs.envs[0].env.switch_task(id)
+                super().run()
+
+            self.save_checkpoint()
+
+        self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
             print("task_info:", task_info)
 
-            # reset replay buffer
-            if self.reset_rb_each_task:
-                self.rb.reset()
-
             self.task_name = task_info
             self.envs.envs[0].env.switch_task(id)
-            super().run(check_learning_start=(id == 0))
 
-        self.save_checkpoint()
+            # check_learning_start=True -> use policy to update action at the beginning
+            # set total_timesteps and learning_start as inf to prevent actor from gradient descent
+            self.learning_starts = self.total_timesteps = int(1e6)
+            self.next_iter_max = self.evaluation_episode_number + self.iteration_id
+            super().run(check_learning_start=False)
 
         self.phase = "eval"
         for id, task_info in enumerate(self.envs.envs[0].env.task_list):
@@ -232,7 +282,8 @@ class TD3ScenarioWrapper(TD3Scenario):
             "current_value": None,
             "current_undiscounted_value": self.value,
             "task_name": self.task_name if hasattr(self, "task_name") else "",
-            "phase": self.phase
+            "phase": self.phase,
+            "exploration": self.exploration if hasattr(self, "exploration") else False,
         }
 
 class PushingObjectSACScenario(SACScenarioWrapper):
@@ -284,7 +335,8 @@ class LineFollowingSACScenario(SACScenarioWrapper):
 
 
 class RobotPursuitSACScenario(SACScenarioWrapper):
-    def __init__(self, simulator, running_objective, device="cuda:0", total_timesteps=1000000, buffer_size=1000000, gamma=0.99, tau=0.005, batch_size=256, learning_starts=5000, policy_lr=0.0003, q_lr=0.001, policy_frequency=2, target_network_frequency=1, alpha=0.2, autotune=True, reset_rb_each_task=False, checkpoint_dirpath=None, env=...):
+    def __init__(self, simulator, running_objective, device="cuda:0", total_timesteps=1000000, buffer_size=1000000, gamma=0.99, tau=0.005, batch_size=256, learning_starts=5000, policy_lr=0.0003, q_lr=0.001, policy_frequency=2, target_network_frequency=1, alpha=0.2, autotune=True, reset_rb_each_task=False, checkpoint_dirpath=None, 
+                 env=..., **kwargs):
         super().__init__(simulator, 
                         running_objective, 
                         device, 
@@ -302,7 +354,8 @@ class RobotPursuitSACScenario(SACScenarioWrapper):
                         autotune, 
                         reset_rb_each_task, 
                         checkpoint_dirpath, 
-                        RobotPursuit)
+                        RobotPursuit,
+                        **kwargs)
 
 
 class PushingObjectTD3Scenario(TD3ScenarioWrapper):

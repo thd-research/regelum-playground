@@ -91,6 +91,7 @@ class Actor(nn.Module):
         )
 
     def forward(self, x):
+        x = np.clip(x * 1.5 / 255 + 0 / 255, 0, 1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
@@ -236,7 +237,7 @@ class SACScenario(CleanRLScenario):
     def meet_stop_condition(self):
         return False
     
-    def run(self, check_learning_start=True):
+    def run(self, check_learning_start=True, buffer_update=True):
         start_debug = True
 
         obs, _ = self.envs.reset()
@@ -254,8 +255,13 @@ class SACScenario(CleanRLScenario):
                         )
                     ]
                 )
+                self.exploration = True
             else:
-                _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                self.exploration = False
+                if self.phase == "train":
+                    actions, _, _ = self.actor.get_action(torch.Tensor(obs).to(self.device))
+                else:
+                     _, _, actions = self.actor.get_action(torch.Tensor(obs).to(self.device))
                 # actions, _ = self.actor(torch.Tensor(obs).to(self.device))
                 actions = (
                         actions.detach()
@@ -296,13 +302,17 @@ class SACScenario(CleanRLScenario):
             for idx, trunc in enumerate(truncations):
                 if trunc:
                     real_next_obs[idx] = infos["final_observation"][idx]
-            self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
+
+            if buffer_update:
+                self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
 
             # ALGO LOGIC: training.
-            if (not check_learning_start and self.rb.buffer_size) or \
-                    (check_learning_start and global_step > self.learning_starts):
+            if  self.phase == "train" and (
+                    (not check_learning_start and self.rb.buffer_size) or \
+                    (check_learning_start and global_step > self.learning_starts)
+                    ):
                 data = self.rb.sample(self.batch_size)
                 with torch.no_grad():
                     next_state_actions, next_state_log_pi, _ = self.actor.get_action(
@@ -388,5 +398,9 @@ class SACScenario(CleanRLScenario):
                         )
         
                 # Save model weight
+        
+        self.reload_scenario()
+        self.reset_episode()
+        self.reset_iteration()
         self.envs.close()
         print("Env closed")
