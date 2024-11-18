@@ -181,30 +181,37 @@ def get_mlruns_info(start_datetime_str,
 
     date_folder = os.listdir(ROOT_DIR)
 
-    valid_path = None
+    valid_paths = []
     for d in date_folder:
         for t in os.listdir(os.path.join(ROOT_DIR, d)):
             tmp_datetime = datetime.strptime(f"{d} {t}", date_format)
             if tmp_datetime < start_date_time or end_date_time < tmp_datetime:
                 continue
 
-            valid_path = str(pathlib.Path(os.path.join(ROOT_DIR, d, t)).absolute())
-            break
-        if valid_path is not None:
-            break
+            valid_paths.append(str(pathlib.Path(os.path.join(ROOT_DIR, d, t)).absolute()))
 
-    if valid_path is None:
+    if len(valid_paths) == 0:
         return pd.DataFrame()
     
-    run_name = "{} {} 0".format(*pathlib.PurePath(valid_path).parts[-2:])
-    actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
-    if not os.path.exists(actor_loss_path):
-        raise FileNotFoundError
+    final_df = None
+    for p in valid_paths:
+        run_name = "{} {} 0".format(*pathlib.PurePath(p).parts[-2:])
+        actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
+        if not os.path.exists(actor_loss_path):
+            raise FileNotFoundError
+        
+        step_info = pd.read_table(actor_loss_path, delimiter=" ", names=["time", "actor_loss", "step_id"])
+        step_info["run_name"] = run_name
+
+        if final_df is None:
+            final_df = step_info
+        else:
+            final_df = pd.concat([final_df, step_info])
+
+    if final_df is None:
+        return pd.DataFrame()
     
-    step_info = pd.read_table(actor_loss_path, delimiter=" ", names=["time", "actor_loss", "step_id"])
-    step_info["run_name"] = run_name
-
     os.makedirs(backup_dir, exist_ok=True)
-    step_info.to_pickle(bk_path)
+    final_df.to_pickle(bk_path)
 
-    return step_info
+    return final_df
