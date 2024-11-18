@@ -11,7 +11,7 @@ reset_replay_buffer=( false )
 replay_buffer_size=( 20000 5000 )
 
 ## get item count using ${arrayname[@]} ##
-for seed in {20..40}; do
+for seed in {23..40}; do
     for s in "${replay_buffer_size[@]}"; do
         for c in "${controllers[@]}"; do
             for t in "${tasks[@]}"; do
