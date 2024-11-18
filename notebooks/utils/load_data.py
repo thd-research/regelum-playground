@@ -15,7 +15,7 @@ from glob import glob
 from yaml import safe_load
 
 
-ROOT_DIR = "./regelum_data/outputs/"
+ROOT_DIR = "/home/robosrv/huyhoang/iclr-2025/regelum-playground-iclr/regelum_data/outputs/"
 
 def correct_column_name(df):
     replacements = {
@@ -196,12 +196,19 @@ def get_mlruns_info(start_datetime_str,
     final_df = None
     for p in valid_paths:
         run_name = "{} {} 0".format(*pathlib.PurePath(p).parts[-2:])
+
+        if run_name not in mlruns_folder_info:
+            continue
+         
         actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
+
+        print("actor_loss_path:", actor_loss_path)
         if not os.path.exists(actor_loss_path):
             raise FileNotFoundError
         
         step_info = pd.read_table(actor_loss_path, delimiter=" ", names=["time", "actor_loss", "step_id"])
         step_info["run_name"] = run_name
+        step_info["experiment_path"] = p
 
         if final_df is None:
             final_df = step_info
