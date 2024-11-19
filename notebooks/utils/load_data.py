@@ -5,7 +5,6 @@ import numpy as np
 import sys, traceback
 import pandas as pd
 from multiprocessing import Pool
-from tqdm import tqdm
 from rich.progress import Progress
 
 from utils.load_config import (
