@@ -5,7 +5,8 @@ import numpy as np
 import sys, traceback
 import pandas as pd
 from multiprocessing import Pool
-
+from tqdm import tqdm
+from rich.progress import Progress
 
 from utils.load_config import (
     get_df_historical_data,
@@ -16,8 +17,9 @@ from utils.load_config import (
 from glob import glob
 from yaml import safe_load
 
-
-ROOT_DIR = "/home/robosrv/huyhoang/iclr-2025/regelum-playground-iclr/regelum_data/outputs/"
+PROJECT_DIR = "."
+PROJECT_DIR = "/home/robosrv/huyhoang/iclr-2025/regelum-playground-iclr"
+ROOT_DIR = PROJECT_DIR + "/regelum_data/outputs/"
 
 def correct_column_name(df):
     replacements = {
@@ -76,16 +78,35 @@ def is_df_valid(df):
     return True
 
 
+def load_mlrun_df(exp_path, mlruns_folder_info):
+    run_name = "{} {} 0".format(*pathlib.PurePath(exp_path).parts[-2:])
+
+    if run_name not in mlruns_folder_info:
+        return pd.DataFrame()
+
+    actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
+
+    # print("actor_loss_path:", actor_loss_path)
+    if not os.path.exists(actor_loss_path):
+        return pd.DataFrame()
+    
+    step_info = pd.read_table(actor_loss_path, delimiter=" ", names=["time", "actor_loss", "step_id"])
+    step_info["run_name"] = run_name
+    step_info["experiment_path"] = exp_path
+
+    return step_info
+
+
 def load_iteration(iteration_path, exp_path, validity_check, objective_function, decay_rate):
     tmp_df = get_df_historical_data(absolute_path=iteration_path)
 
     if tmp_df.empty:
-        return None
+        return pd.DataFrame(), pd.DataFrame()
             
     tmp_df = correct_column_name(tmp_df)
 
     if validity_check and not is_df_valid(tmp_df):
-        return None
+        return pd.DataFrame()
 
     tmp_df["absolute_path"] = iteration_path
     config = load_exp_config(exp_path)
@@ -97,6 +118,13 @@ def load_iteration(iteration_path, exp_path, validity_check, objective_function,
         tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
 
     return tmp_df
+
+
+def name_backup_file(prefix, start_datetime_str, end_datetime_str, backup_dir):
+    backup_file_name = "_".join([c.replace(" ", "_") for c in [prefix, start_datetime_str, end_datetime_str]]) + ".pkl"
+    bk_path = os.path.join(backup_dir, backup_file_name)
+    return bk_path
+
 
 def get_df_from_datetime_range(start_datetime_str, 
                                end_datetime_str, 
@@ -111,14 +139,14 @@ def get_df_from_datetime_range(start_datetime_str,
     start_date_time = datetime.strptime(start_datetime_str, date_format)
     end_date_time = datetime.strptime(end_datetime_str, date_format)
     
+    log_bk_path = name_backup_file("data", start_datetime_str, end_datetime_str, backup_dir)
+    mlrun_bk_path = name_backup_file("mlruns_actorloss_", start_datetime_str, end_datetime_str, backup_dir)
 
-    backup_file_name = "_".join([c.replace(" ", "_") for c in ["data", start_datetime_str, end_datetime_str]]) + ".pkl"
-    bk_path = os.path.join(backup_dir, backup_file_name)
-
-    if not reload and os.path.exists(bk_path):
-        return pd.read_pickle(bk_path)
+    if not reload and os.path.exists(log_bk_path) and os.path.exists(mlrun_bk_path):
+        return pd.read_pickle(log_bk_path), pd.read_pickle(mlrun_bk_path)
 
     date_folder = os.listdir(ROOT_DIR)
+    mlruns_folder_info = get_mlruns_folder_info()
 
     valid_paths = []
     for d in date_folder:
@@ -133,52 +161,81 @@ def get_df_from_datetime_range(start_datetime_str,
     for p in valid_paths:
         path_hierachy[p] = get_list_historical_data(p)
 
-    print("Load path:", "\n".join(path_hierachy))
+    print("Load path:", len(path_hierachy))
     total_dfs = []
-    for exp_path in path_hierachy:
-        exp_dfs = []
-        # for iteration_path in path_hierachy[exp_path]:
-        #     tmp_df = get_df_historical_data(absolute_path=iteration_path)
+    total_mlrun_dfs = []
+
+    with Progress() as progress:
+        task1 = progress.add_task("[red]Total loading...", total=len(path_hierachy)) # Just for visualization
+
+        for exp_path in path_hierachy:
+            progress.update(task1, advance=1) # Just for visualization
+            mlrun_df = load_mlrun_df(exp_path, mlruns_folder_info)
+
+            if mlrun_df.empty:
+                continue
+
+            total_mlrun_dfs.append(mlrun_df)
+
+            task2 = progress.add_task("[green]Iteration loading...", total=len(path_hierachy)) # Just for visualization
+            exp_dfs = []
+
+            with Pool() as p:
+                args = [(iteration_path, 
+                         exp_path, 
+                         validity_check, 
+                         objective_function, 
+                         decay_rate) 
+                        for iteration_path in path_hierachy[exp_path]]
+                for tmp_df in p.starmap(load_iteration, args):
+                    if tmp_df.empty:
+                        continue
+
+                    exp_dfs.append(tmp_df)
+                    progress.update(task2, advance=1) # Just for visualization
+                    
+            if len(exp_dfs) == 0:
+                continue
             
-        #     tmp_df = correct_column_name(tmp_df)
-
-        #     if validity_check and not is_df_valid(tmp_df):
-        #         continue
-
-        #     tmp_df["absolute_path"] = iteration_path
-        #     config = load_exp_config(exp_path)
-        #     tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
+            exp_df = pd.concat(exp_dfs)
+            exp_df.sort_values(by=["iteration_id", "time"], inplace=True)
+            exp_df["experiment_path"] = exp_path
             
-        #     if objective_function is not None:
-        #         tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
-        #         # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
-        #         tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
+            total_dfs.append(exp_df)
 
-        #     exp_dfs.append(tmp_df)
-
-        with Pool() as p:
-            args = [(iteration_path, exp_path, validity_check, objective_function, decay_rate) for iteration_path in path_hierachy[exp_path]]
-            for tmp_df in p.starmap_async(load_iteration, args):
-                exp_dfs.append(tmp_df)
-                
-        if len(exp_dfs) == 0:
-            continue
-        
-        exp_df = pd.concat(exp_dfs)
-        exp_df.sort_values(by=["iteration_id", "time"], inplace=True)
-        exp_df["experiment_path"] = exp_path
-        
-        total_dfs.append(exp_df)
+            progress.remove_task(task2)
 
     total_df = pd.concat(total_dfs)
+    total_mlrun_df = pd.concat(total_mlrun_dfs)
+
 
     # Post process
     total_df = total_df[total_df.iteration_id <= max_iter]
 
     os.makedirs(backup_dir, exist_ok=True)
-    total_df.to_pickle(bk_path)
+    total_df.to_pickle(log_bk_path)
+    total_mlrun_df.to_pickle(mlrun_bk_path)
     
-    return total_df
+    return total_df, total_mlrun_df
+
+
+def get_mlruns_folder_info():
+    MLRUN_DIR = PROJECT_DIR + "/regelum_data/mlruns"
+    mlruns_yaml_files = glob(f"{MLRUN_DIR}/**/*.yaml", recursive=True)
+    mlruns_folder_info = {}
+
+    for fp in mlruns_yaml_files:
+        with open(fp, "r") as f:
+            data = safe_load(f)
+
+        if not isinstance(data, dict):
+            continue
+
+        if "run_id" in data.keys():
+            mlruns_folder_info[data["run_name"]] = os.path.join(MLRUN_DIR, data["experiment_id"], data["run_id"])
+
+    return mlruns_folder_info
+
 
 def get_mlruns_info(start_datetime_str, 
                     end_datetime_str,
@@ -192,19 +249,7 @@ def get_mlruns_info(start_datetime_str,
     if not reload and os.path.exists(bk_path):
         return pd.read_pickle(bk_path)
 
-    MLRUN_DIR = "./regelum_data/mlruns"
-    mlruns_yaml_files = glob(f"{MLRUN_DIR}/**/*.yaml", recursive=True)
-    mlruns_folder_info = {}
-
-    for fp in mlruns_yaml_files:
-        with open(fp, "r") as f:
-            data = safe_load(f)
-
-        if not isinstance(data, dict):
-            continue
-
-        if "run_id" in data.keys():
-            mlruns_folder_info[data["run_name"]] = os.path.join(MLRUN_DIR, data["experiment_id"], data["run_id"])
+    mlruns_folder_info = get_mlruns_folder_info()
 
     start_date_time = datetime.strptime(start_datetime_str, date_format)
     end_date_time = datetime.strptime(end_datetime_str, date_format)
@@ -229,10 +274,10 @@ def get_mlruns_info(start_datetime_str,
 
         if run_name not in mlruns_folder_info:
             continue
-         
+
         actor_loss_path = mlruns_folder_info[run_name] + "/metrics/losses/actor_loss"
 
-        print("actor_loss_path:", actor_loss_path)
+        # print("actor_loss_path:", actor_loss_path)
         if not os.path.exists(actor_loss_path):
             raise FileNotFoundError
         
