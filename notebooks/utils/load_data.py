@@ -4,6 +4,8 @@ import pathlib
 import numpy as np
 import sys, traceback
 import pandas as pd
+from multiprocessing import Pool
+
 
 from utils.load_config import (
     get_df_historical_data,
@@ -74,6 +76,28 @@ def is_df_valid(df):
     return True
 
 
+def load_iteration(iteration_path, exp_path, validity_check, objective_function, decay_rate):
+    tmp_df = get_df_historical_data(absolute_path=iteration_path)
+
+    if tmp_df.empty:
+        return None
+            
+    tmp_df = correct_column_name(tmp_df)
+
+    if validity_check and not is_df_valid(tmp_df):
+        return None
+
+    tmp_df["absolute_path"] = iteration_path
+    config = load_exp_config(exp_path)
+    tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
+    
+    if objective_function is not None:
+        tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
+        # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
+        tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
+
+    return tmp_df
+
 def get_df_from_datetime_range(start_datetime_str, 
                                end_datetime_str, 
                                objective_function=None,
@@ -113,24 +137,30 @@ def get_df_from_datetime_range(start_datetime_str,
     total_dfs = []
     for exp_path in path_hierachy:
         exp_dfs = []
-        for iteration_path in path_hierachy[exp_path]:
-            tmp_df = get_df_historical_data(absolute_path=iteration_path)
+        # for iteration_path in path_hierachy[exp_path]:
+        #     tmp_df = get_df_historical_data(absolute_path=iteration_path)
             
-            tmp_df = correct_column_name(tmp_df)
+        #     tmp_df = correct_column_name(tmp_df)
 
-            if validity_check and not is_df_valid(tmp_df):
-                continue
+        #     if validity_check and not is_df_valid(tmp_df):
+        #         continue
 
-            tmp_df["absolute_path"] = iteration_path
-            config = load_exp_config(exp_path)
-            tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
+        #     tmp_df["absolute_path"] = iteration_path
+        #     config = load_exp_config(exp_path)
+        #     tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
             
-            if objective_function is not None:
-                tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
-                # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
-                tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
+        #     if objective_function is not None:
+        #         tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
+        #         # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
+        #         tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
 
-            exp_dfs.append(tmp_df)
+        #     exp_dfs.append(tmp_df)
+
+        with Pool() as p:
+            args = [(iteration_path, exp_path, validity_check, objective_function, decay_rate) for iteration_path in path_hierachy[exp_path]]
+            for tmp_df in p.starmap_async(load_iteration, args):
+                exp_dfs.append(tmp_df)
+                
         if len(exp_dfs) == 0:
             continue
         
