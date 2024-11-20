@@ -17,7 +17,7 @@ from glob import glob
 from yaml import safe_load
 
 PROJECT_DIR = "."
-PROJECT_DIR = "/home/robosrv/huyhoang/iclr-2025/regelum-playground-iclr"
+PROJECT_DIR = "/home/tcc/huyhoang/irlc_2025/regelum-playground-iclr"
 ROOT_DIR = PROJECT_DIR + "/regelum_data/outputs/"
 
 def correct_column_name(df):
