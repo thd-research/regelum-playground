@@ -5,6 +5,7 @@
 *$py.class
 
 backup-data/
+checkpoints/
 
 # C extensions
 *.so
