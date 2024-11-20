@@ -1,13 +1,5 @@
 #!/bin/bash
 
-START_SEED=20
-echo ARGS $#
-if [ "$#" == "1" ] ; then
-START_SEED=${1}
-fi
-
-echo "START_SEED" ${START_SEED}
-
 ## define an array with three items ##
 # controllers=( sac td3 )
 controllers=( sac )
@@ -19,7 +11,7 @@ reset_replay_buffer=( false )
 replay_buffer_size=( 20000 5000 )
 
 ## get item count using ${arrayname[@]} ##
-for seed in {${START_SEED}..40}; do
+for seed in {40..50}; do
     for s in "${replay_buffer_size[@]}"; do
         for c in "${controllers[@]}"; do
             for t in "${tasks[@]}"; do
