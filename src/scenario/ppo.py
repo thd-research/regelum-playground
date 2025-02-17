@@ -89,8 +89,8 @@ class PPOScenario(CleanRLScenario):
         device: str = "cuda:0",
         total_timesteps: int = 1000000,
         gamma: float = 0.99,
-        learning_starts: int = 5000,
         policy_lr: float = 3.0e-4,
+        anneal_lr: bool = True,
         num_steps: int = 2048,
         num_iterations: int = 0,
         gae_lambda: float = 0.95,
@@ -103,6 +103,7 @@ class PPOScenario(CleanRLScenario):
         ent_coef: float = 0.0,
         max_grad_norm: float = 0.5,
         target_kl: float = None,
+        seed: int = 42,
         env: RgEnv = RgEnv,
     ):
         """
@@ -114,9 +115,21 @@ class PPOScenario(CleanRLScenario):
             device: The device to run the computations on.
             total_timesteps: Total number of timesteps for the scenario.
             gamma: Discount factor for future rewards.
-            batch_size: Batch size for training.
-            learning_starts: Number of steps before actor learning starts.
             policy_lr: Learning rate for the policy network.
+            anneal_lr: Toggle learning rate annealing for policy and value networks
+            num_steps: The number of steps to run in each environment per policy rollout
+            num_iterations: The number of iterations (computed in runtime)
+            gae_lambda: The lambda for the general advantage estimation
+            update_epoch: the K epochs to update the policy
+            num_minibatches: the number of mini-batches
+            clip_coef: the surrogate clipping coefficient
+            norm_adv: Toggles advantages normalization
+            clip_vloss: Toggles whether or not to use a clipped loss for the value function, as per the paper.
+            vf_coef: coefficient of the value function
+            ent_coef: coefficient of the entropy
+            max_grad_norm: the maximum norm for the gradient clipping
+            target_kl: the target KL divergence threshold
+            env: 
         """
         super().__init__(
             simulator=simulator,
@@ -126,13 +139,11 @@ class PPOScenario(CleanRLScenario):
             env=env,
         )
         self.gamma = gamma
-        self.learning_starts = learning_starts
         self.policy_lr = policy_lr
 
-
-        num_envs = 1
+        self.num_envs = 1
         # PPO
-        self.batch_size = int(num_envs * num_steps)
+        self.batch_size = int(self.num_envs * num_steps)
         self.num_steps = num_steps
         self.num_iterations = num_iterations
         self.gae_lambda = gae_lambda
@@ -145,13 +156,15 @@ class PPOScenario(CleanRLScenario):
         self.max_grad_norm = max_grad_norm
         self.target_kl = target_kl
         self.vf_coef = vf_coef
+        self.anneal_lr = anneal_lr
+
+        self.seed = seed
 
         self.dim_action, self.dim_observation, self.action_bounds = (
             simulator.system._dim_inputs,
             simulator.system._dim_observation,
             np.array(simulator.system._action_bounds),
         )
-        self.actor = Actor(self.dim_action, self.dim_observation, self.action_bounds).to(self.device)
         
         self.agent = Actor(self.dim_action, self.dim_observation).to(self.device)
         self.optimizer = optim.Adam(self.agent.parameters()
@@ -182,8 +195,8 @@ class PPOScenario(CleanRLScenario):
     def run(self, check_learning_start=True, buffer_update=True):
         start_debug = True
         # ALGO Logic: Storage setup
-        obs = torch.zeros((self.num_steps, self.num_envs) + self.dim_observation).to(self.device)
-        actions = torch.zeros((self.num_steps, self.num_envs) + self.dim_action).to(self.device)
+        obs = torch.zeros((self.num_steps, self.num_envs) + (self.dim_observation,)).to(self.device)
+        actions = torch.zeros((self.num_steps, self.num_envs) + (self.dim_action,)).to(self.device)
         logprobs = torch.zeros((self.num_steps, self.num_envs)).to(self.device)
         rewards = torch.zeros((self.num_steps, self.num_envs)).to(self.device)
         dones = torch.zeros((self.num_steps, self.num_envs)).to(self.device)
@@ -283,9 +296,9 @@ class PPOScenario(CleanRLScenario):
                     returns = advantages + values
 
                 # flatten the batch
-                b_obs = obs.reshape((-1,) + self.dim_observation)
+                b_obs = obs.reshape((-1,) + (self.dim_observation,))
                 b_logprobs = logprobs.reshape(-1)
-                b_actions = actions.reshape((-1,) + self.dim_action)
+                b_actions = actions.reshape((-1,) + (self.dim_action,))
                 b_advantages = advantages.reshape(-1)
                 b_returns = returns.reshape(-1)
                 b_values = values.reshape(-1)
