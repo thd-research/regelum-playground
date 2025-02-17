@@ -27,7 +27,6 @@ class PPOScenarioWrapper(PPOScenario):
                  ent_coef: float = 0.0,
                  max_grad_norm: float = 0.5,
                  target_kl: float = None,
-                 reset_rb_each_task = False,
                  checkpoint_dirpath = None,
                  env = ...,
                  seed = 42,
@@ -63,7 +62,6 @@ class PPOScenarioWrapper(PPOScenario):
                          target_kl = target_kl,
                          seed=seed,
                          env=chosen_env)
-        self.reset_rb_each_task = reset_rb_each_task
         self.evaluation_episode_number = int(kwargs.get("evaluation_episode_number", "30"))
         self.eval_only = bool(int(kwargs.get("evaluation_only", False)))
 
@@ -92,9 +90,6 @@ class PPOScenarioWrapper(PPOScenario):
         else:
             for train_id, task_name in enumerate(task_list):
                 self.phase = "train"
-                # reset replay buffer
-                if self.reset_rb_each_task:
-                    self.rb.reset()
 
                 self.task_name = task_name
                 self.envs.envs[0].env.switch_task(train_id)

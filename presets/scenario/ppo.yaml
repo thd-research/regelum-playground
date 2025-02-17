@@ -18,7 +18,6 @@ vf_coef: 0.5
 ent_coef: 0.0
 max_grad_norm: 0.5
 target_kl: null
-reset_rb_each_task: False
 checkpoint_dirpath: null
 seed: 42
 env: ""

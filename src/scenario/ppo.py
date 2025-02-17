@@ -240,7 +240,7 @@ class PPOScenario(CleanRLScenario):
                     self.time,
                     global_step,
                 )
-                
+
                 next_done = np.logical_or(terminations, truncations)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
                 next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
@@ -259,21 +259,6 @@ class PPOScenario(CleanRLScenario):
                             
                 # if self.meet_stop_condition():
                 #     break
-
-
-            if start_debug:
-                print(f"global step: {global_step}, buffer size: {self.rb.size()}")
-
-            # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
-            real_next_obs = next_obs.copy()
-            for idx, trunc in enumerate(truncations):
-                if trunc:
-                    real_next_obs[idx] = infos["final_observation"][idx]
-
-            if buffer_update:
-                self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
-            # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
-            obs = next_obs
 
             # ALGO LOGIC: training.
             if  self.phase == "train" :
