@@ -11,10 +11,9 @@ docker run  -ti --rm \
             -e XAUTHORITY \
             -v /dev:/dev \
             -v $ROOT_DIR:/regelum-playground \
-            --net=host \
+            --net=none \
             --privileged \
-            --cpuset-cpus "0-3" \
-            --name regelum-iclr regelum-iclr-img
+            --name regelum-iclr-2 regelum-iclr-img
 
 cd $ROOT_DIR/.git && \
   sudo chgrp -R $(id -g -n $(whoami)) . &&\
