@@ -92,7 +92,6 @@ class PPOScenario(CleanRLScenario):
         policy_lr: float = 3.0e-4,
         anneal_lr: bool = True,
         num_steps: int = 2048,
-        num_iterations: int = 0,
         gae_lambda: float = 0.95,
         update_epoch: int = 10,
         num_minibatches: int = 32,
@@ -118,7 +117,6 @@ class PPOScenario(CleanRLScenario):
             policy_lr: Learning rate for the policy network.
             anneal_lr: Toggle learning rate annealing for policy and value networks
             num_steps: The number of steps to run in each environment per policy rollout
-            num_iterations: The number of iterations (computed in runtime)
             gae_lambda: The lambda for the general advantage estimation
             update_epoch: the K epochs to update the policy
             num_minibatches: the number of mini-batches
@@ -145,7 +143,7 @@ class PPOScenario(CleanRLScenario):
         # PPO
         self.batch_size = int(self.num_envs * num_steps)
         self.num_steps = num_steps
-        self.num_iterations = num_iterations
+        self.num_iterations = total_timesteps // self.batch_size
         self.gae_lambda = gae_lambda
         self.update_epoch = update_epoch
         self.minibatch_size = int(self.batch_size // num_minibatches)
@@ -209,7 +207,6 @@ class PPOScenario(CleanRLScenario):
         next_obs = torch.Tensor(next_obs).to(self.device)
         next_done = torch.zeros(self.num_envs).to(self.device)
 
-        obs, _ = self.envs.reset()
         for iteration in range(1, self.num_iterations + 1):
             if self.anneal_lr:
                 frac = 1.0 - (iteration - 1.0) / self.num_iterations
@@ -233,19 +230,20 @@ class PPOScenario(CleanRLScenario):
         
                 # TRY NOT TO MODIFY: execute the game and log data.
                 next_obs, reward, terminations, truncations, infos = self.envs.step(action.cpu().numpy())
-                next_done = np.logical_or(terminations, truncations)
-                rewards[step] = torch.tensor(reward).to(self.device).view(-1)
-                next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
 
                 # before calling the step method
                 self.post_compute_action(
                     self.state,
-                    obs,
+                    next_obs,
                     action,
-                    float(rewards.reshape(-1)),
+                    float(reward),
                     self.time,
                     global_step,
                 )
+                
+                next_done = np.logical_or(terminations, truncations)
+                rewards[step] = torch.tensor(reward).to(self.device).view(-1)
+                next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
 
                 # We need state and time for logging, so we extracted it 2 lines above
                 if "final_info" in infos:

@@ -8,7 +8,6 @@ gamma: 0.99
 policy_lr: 3.0e-4
 anneal_lr: True
 num_steps: 2048
-num_iterations: 0
 gae_lambda: 0.95
 update_epoch: 10
 num_minibatches: 32

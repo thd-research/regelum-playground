@@ -17,7 +17,6 @@ class PPOScenarioWrapper(PPOScenario):
                  policy_lr: float = 3.0e-4,
                  anneal_lr: bool = True,
                  num_steps: int = 2048,
-                 num_iterations: int = 0,
                  gae_lambda: float = 0.95,
                  update_epoch: int = 10,
                  num_minibatches: int = 32,
@@ -52,7 +51,6 @@ class PPOScenarioWrapper(PPOScenario):
                          policy_lr = policy_lr,
                          anneal_lr = anneal_lr,
                          num_steps = num_steps,
-                         num_iterations = num_iterations,
                          gae_lambda = gae_lambda,
                          update_epoch = update_epoch,
                          num_minibatches = num_minibatches,
@@ -134,6 +132,27 @@ class PPOScenarioWrapper(PPOScenario):
     def save_checkpoint(self, id):
         save_nn_model(self.agent, f"agent_{id}")
 
+    @apply_callbacks()
+    def post_compute_action(self, state, obs, action, reward, time, global_step):
+        self.current_running_objective = reward
+        self.value += reward
+        return {
+            "estimated_state": state,
+            "observation": obs,
+            "time": time,
+            "episode_id": self.episode_id,
+            "iteration_id": self.iteration_id,
+            "step_id": global_step,
+            "action": action,
+            "running_objective": reward,
+            "current_value": None,
+            "current_undiscounted_value": self.value,
+            "task_name": self.task_name if hasattr(self, "task_name") else "",
+            "phase": self.phase,
+            "exploration": self.exploration if hasattr(self, "exploration") else False,
+            "robot_position": self.simulator.manager.get_position(),
+        }
+    
 def save_nn_model(
     torch_nn_module: torch.nn.Module,
     name: str,
