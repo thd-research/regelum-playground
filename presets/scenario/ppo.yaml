@@ -9,7 +9,7 @@ policy_lr: 3.0e-4
 anneal_lr: True
 num_steps: 2048
 gae_lambda: 0.95
-update_epoch: 10
+update_epochs: 10
 num_minibatches: 32
 clip_coef: 0.2
 norm_adv: True

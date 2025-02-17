@@ -93,7 +93,7 @@ class PPOScenario(CleanRLScenario):
         anneal_lr: bool = True,
         num_steps: int = 2048,
         gae_lambda: float = 0.95,
-        update_epoch: int = 10,
+        update_epochs: int = 10,
         num_minibatches: int = 32,
         clip_coef: float = 0.2,
         norm_adv: bool = True,
@@ -118,7 +118,7 @@ class PPOScenario(CleanRLScenario):
             anneal_lr: Toggle learning rate annealing for policy and value networks
             num_steps: The number of steps to run in each environment per policy rollout
             gae_lambda: The lambda for the general advantage estimation
-            update_epoch: the K epochs to update the policy
+            update_epochs: the K epochs to update the policy
             num_minibatches: the number of mini-batches
             clip_coef: the surrogate clipping coefficient
             norm_adv: Toggles advantages normalization
@@ -145,7 +145,7 @@ class PPOScenario(CleanRLScenario):
         self.num_steps = num_steps
         self.num_iterations = total_timesteps // self.batch_size
         self.gae_lambda = gae_lambda
-        self.update_epoch = update_epoch
+        self.update_epochs = update_epochs
         self.minibatch_size = int(self.batch_size // num_minibatches)
         self.clip_coef = clip_coef
         self.norm_adv = norm_adv
@@ -155,7 +155,7 @@ class PPOScenario(CleanRLScenario):
         self.target_kl = target_kl
         self.vf_coef = vf_coef
         self.anneal_lr = anneal_lr
-
+        
         self.seed = seed
 
         self.dim_action, self.dim_observation, self.action_bounds = (
