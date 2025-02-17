@@ -340,13 +340,17 @@ class PPOScenario(CleanRLScenario):
 
                     if self.target_kl is not None and approx_kl > self.target_kl:
                         break
-
+                
                 y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
                 var_y = np.var(y_true)
                 explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        
-                # Save model weight
+                self.save_losses(
+                        global_step=global_step,
+                        entropy_loss=entropy_loss.mean().item(),
+                        v_loss=v_loss.mean().item(),
+                        actor_loss=loss.mean().item(),
+                    )
         
         self.reload_scenario()
         self.reset_episode()
