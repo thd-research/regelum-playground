@@ -208,6 +208,9 @@ class PPOScenario(CleanRLScenario):
         next_done = torch.zeros(self.num_envs).to(self.device)
 
         for iteration in range(1, self.num_iterations + 1):
+            if self.meet_stop_condition():
+                break
+
             if self.anneal_lr:
                 frac = 1.0 - (iteration - 1.0) / self.num_iterations
                 lrnow = frac * self.policy_lr
@@ -247,6 +250,7 @@ class PPOScenario(CleanRLScenario):
 
                 # We need state and time for logging, so we extracted it 2 lines above
                 if "final_info" in infos:
+                    is_episode_end = False
                     for info in infos["final_info"]:
                         if info and "episode" in info:
                             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
@@ -256,9 +260,11 @@ class PPOScenario(CleanRLScenario):
                             self.reload_scenario()
                             self.reset_episode()
                             self.reset_iteration()
-                            
-                # if self.meet_stop_condition():
-                #     break
+                            is_episode_end = True
+                            break
+                    
+                    if self.phase == "eval" and is_episode_end:
+                        break 
 
             # ALGO LOGIC: training.
             if  self.phase == "train" :
