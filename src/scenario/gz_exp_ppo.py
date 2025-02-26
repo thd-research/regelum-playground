@@ -110,10 +110,19 @@ class PPOScenarioWrapper(PPOScenario):
                     # check_learning_start=True -> use policy to update action at the beginning
                     # set total_timesteps and learning_start as inf to prevent actor from gradient descent
                     total_timesteps_backup = copy(self.total_timesteps)
+                    num_iterations_backup = copy(self.num_iterations)
+                    num_steps_backup = copy(self.num_steps)
+
+                    self.num_steps = self.total_timesteps = int(1e6)
+                    self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
+                    self.num_iterations = self.evaluation_episode_number
+
                     self.next_iter_max = self.evaluation_episode_number + self.iteration_id - 1
                     super().run(check_learning_start=False, buffer_update=False)
 
                     self.total_timesteps = total_timesteps_backup
+                    self.num_iterations = num_iterations_backup
+                    self.num_steps = num_steps_backup
 
     def meet_stop_condition(self):
         if self.phase == "eval":
