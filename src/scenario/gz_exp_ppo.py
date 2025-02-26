@@ -122,7 +122,7 @@ class PPOScenarioWrapper(PPOScenario):
             return False
     
     def load_checkpoint(self, experiment_path):
-        load_nn_model(self.agent, "agent", experiment_path)
+        load_nn_model(self.agent, "agent_0", experiment_path)
 
     def save_checkpoint(self, id):
         save_nn_model(self.agent, f"agent_{id}")

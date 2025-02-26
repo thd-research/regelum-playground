@@ -18,6 +18,7 @@ from yaml import safe_load
 
 PROJECT_DIR = "."
 PROJECT_DIR = "/home/robosrv/huyhoang/iclr-2025/regelum-playground-iclr"
+# PROJECT_DIR = "/regelum-playground"
 ROOT_DIR = PROJECT_DIR + "/regelum_data/outputs/"
 
 def correct_column_name(df):
@@ -97,26 +98,33 @@ def load_mlrun_df(exp_path, mlruns_folder_info):
 
 
 def load_iteration(iteration_path, exp_path, validity_check, objective_function, decay_rate):
-    tmp_df = get_df_historical_data(absolute_path=iteration_path)
 
-    if tmp_df.empty:
-        return pd.DataFrame(), pd.DataFrame()
-            
-    tmp_df = correct_column_name(tmp_df)
+    try:
+        tmp_df = get_df_historical_data(absolute_path=iteration_path)
 
-    if validity_check and not is_df_valid(tmp_df):
+        if tmp_df.empty:
+            return pd.DataFrame(), pd.DataFrame()
+                
+        tmp_df = correct_column_name(tmp_df)
+
+        if validity_check and not is_df_valid(tmp_df):
+            return pd.DataFrame()
+
+        tmp_df["absolute_path"] = iteration_path
+        config = load_exp_config(exp_path)
+        tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
+        
+        if objective_function is not None:
+            tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
+            # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
+            tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
+
+        return tmp_df
+    except Exception as err:
+        print("[load_iteration] Error with:", exp_path)
+        print("[load_iteration] Error:", err)
+
         return pd.DataFrame()
-
-    tmp_df["absolute_path"] = iteration_path
-    config = load_exp_config(exp_path)
-    tmp_df.loc[:, "exp_config"] = [config] * len(tmp_df)
-    
-    if objective_function is not None:
-        tmp_df["objective_value"] = tmp_df.apply(lambda x: cal_obj_df(x, objective_function), axis=1)
-        # tmp_df["accumulative_objective"] = tmp_df["objective_value"].apply(lambda x: x*0.1).cumsum()
-        tmp_df["accumulative_objective"] = tmp_df.apply(lambda x: x["objective_value"]*0.1*decay_rate**x["time"], axis=1).cumsum()
-
-    return tmp_df
 
 
 def name_backup_file(prefix, start_datetime_str, end_datetime_str, backup_dir):
@@ -147,6 +155,8 @@ def get_df_from_datetime_range(start_datetime_str,
     date_folder = os.listdir(ROOT_DIR)
     mlruns_folder_info = get_mlruns_folder_info()
 
+    print("Load mlruns_folder_info:", len(mlruns_folder_info))
+
     valid_paths = []
     for d in date_folder:
         for t in os.listdir(os.path.join(ROOT_DIR, d)):
@@ -160,49 +170,63 @@ def get_df_from_datetime_range(start_datetime_str,
     for p in valid_paths:
         path_hierachy[p] = get_list_historical_data(p)
 
-    print("Load path:", len(path_hierachy))
+    print("Load path:", len(path_hierachy), path_hierachy)
+    print("mlruns_folder_info:", mlruns_folder_info)
     total_dfs = []
     total_mlrun_dfs = []
 
     with Progress() as progress:
         task1 = progress.add_task("[red]Total loading...", total=len(path_hierachy)) # Just for visualization
 
-        for exp_path in path_hierachy:
-            progress.update(task1, advance=1) # Just for visualization
-            mlrun_df = load_mlrun_df(exp_path, mlruns_folder_info)
+        try:
+            for exp_path in path_hierachy:
+                progress.update(task1, advance=1) # Just for visualization
+                mlrun_df = load_mlrun_df(exp_path, mlruns_folder_info)
 
-            if mlrun_df.empty:
-                continue
+                if mlrun_df.empty:
+                    print(f"Empty df: {exp_path}")
+                    continue
 
-            total_mlrun_dfs.append(mlrun_df)
+                total_mlrun_dfs.append(mlrun_df)
 
-            task2 = progress.add_task("[green]Iteration loading...", total=len(path_hierachy)) # Just for visualization
-            exp_dfs = []
+                task2 = progress.add_task("[green]Iteration loading...", total=len(path_hierachy)) # Just for visualization
+                exp_dfs = []
 
-            with Pool() as p:
                 args = [(iteration_path, 
-                         exp_path, 
-                         validity_check, 
-                         objective_function, 
-                         decay_rate) 
-                        for iteration_path in path_hierachy[exp_path]]
-                for tmp_df in p.starmap(load_iteration, args):
+                            exp_path, 
+                            validity_check, 
+                            objective_function, 
+                            decay_rate) 
+                            for iteration_path in path_hierachy[exp_path]]
+                
+                # with Pool(processes=1) as p:
+                #     for tmp_df in p.starmap(load_iteration, args):
+                #         if tmp_df.empty:
+                #             continue
+
+                #         exp_dfs.append(tmp_df)
+                #         progress.update(task2, advance=1) # Just for visualization
+                                # with Pool(processes=1) as p:
+                for arg in args:
+                    tmp_df = load_iteration(*arg)
                     if tmp_df.empty:
                         continue
 
                     exp_dfs.append(tmp_df)
                     progress.update(task2, advance=1) # Just for visualization
-                    
-            if len(exp_dfs) == 0:
-                continue
-            
-            exp_df = pd.concat(exp_dfs)
-            exp_df.sort_values(by=["iteration_id", "time"], inplace=True)
-            exp_df["experiment_path"] = exp_path
-            
-            total_dfs.append(exp_df)
 
-            progress.remove_task(task2)
+                if len(exp_dfs) == 0:
+                    continue
+                
+                exp_df = pd.concat(exp_dfs)
+                exp_df.sort_values(by=["iteration_id", "time"], inplace=True)
+                exp_df["experiment_path"] = exp_path
+                
+                total_dfs.append(exp_df)
+
+                progress.remove_task(task2)
+        except Exception as err:
+            print("Error:", err)
 
     total_df = pd.concat(total_dfs)
     total_mlrun_df = pd.concat(total_mlrun_dfs)
