@@ -21,3 +21,5 @@ target_kl: null
 checkpoint_dirpath: null
 seed: 42
 env: ""
+evaluation_only: False
+evaluation_episode_number: 30

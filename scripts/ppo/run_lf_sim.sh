@@ -137,10 +137,11 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     system=3wrobot_line_following \
     running_objective=3wrobot_line_following \
     scenario.env="LineFollowing" \
-    scenario.total_timesteps=5000 \
+    scenario.total_timesteps=10000 \
     scenario.num_steps=250 \
+    scenario.device="cpu" \
     +seed=${SEED} \
-    --experiment=ppo_lf
+    --experiment=ppo_lf_extend
 
 echo DONE
 

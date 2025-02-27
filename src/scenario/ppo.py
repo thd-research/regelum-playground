@@ -78,7 +78,7 @@ class Actor(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x), action_mean
     
 
 class PPOScenario(CleanRLScenario):
@@ -223,7 +223,11 @@ class PPOScenario(CleanRLScenario):
 
                 # ALGO LOGIC: action logic
                 with torch.no_grad():
-                    action, logprob, _, value = self.agent.get_action_and_value(next_obs)
+                    action, logprob, _, value, action_mean = self.agent.get_action_and_value(next_obs)
+
+                    if self.phase == "eval":
+                        action = action_mean.copy()
+
                     values[step] = value.flatten()
                 actions[step] = action
                 logprobs[step] = logprob
@@ -302,7 +306,7 @@ class PPOScenario(CleanRLScenario):
                         end = start + self.minibatch_size
                         mb_inds = b_inds[start:end]
 
-                        _, newlogprob, entropy, newvalue = self.agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                        _, newlogprob, entropy, newvalue, action_mean = self.agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                         logratio = newlogprob - b_logprobs[mb_inds]
                         ratio = logratio.exp()
 
