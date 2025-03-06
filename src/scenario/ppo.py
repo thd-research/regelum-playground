@@ -38,6 +38,8 @@ import mlflow
 from .base import CleanRLScenario
 import time
 
+from copy import copy
+
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -225,8 +227,8 @@ class PPOScenario(CleanRLScenario):
                 with torch.no_grad():
                     action, logprob, _, value, action_mean = self.agent.get_action_and_value(next_obs)
 
-                    if self.phase == "eval":
-                        action = action_mean.copy()
+                    # if self.phase == "eval":
+                    #     action = copy(action_mean)
 
                     values[step] = value.flatten()
                 actions[step] = action
@@ -360,6 +362,8 @@ class PPOScenario(CleanRLScenario):
                         entropy_loss=entropy_loss.mean().item(),
                         v_loss=v_loss.mean().item(),
                         actor_loss=loss.mean().item(),
+                        pg_loss=pg_loss.mean().item(),
+                        explained_var=explained_var.mean().item(),
                     )
         
         self.reload_scenario()

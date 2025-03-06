@@ -1,8 +1,11 @@
-#! /bin/bash
+#!/bin/bash
 PROCESSES=(
     "gz.*sim"
     "colored_line_following.sdf"
+    "pushing_objects.sdf"
+    "models/catching_robot.sdf"
     "gazebo_simulator"
+    "run.py"
     "ruby"
     "gz"
 )
@@ -73,7 +76,7 @@ function execute_state {
 }
 
 
-#------------ COMMON DEFINITIONS ----------------------
+# *------------ COMMON DEFINITIONS ----------------------
 SRC_PATH=""
 PROJECT_DIR="regelum-playground"
 BUFFER_SIZE=20000
@@ -96,10 +99,9 @@ SEED=${3}
 echo "BUFFER_RESET:" ${BUFFER_RESET} " BUFFER_RESET:" ${BUFFER_SIZE} " SEED:" ${SEED}
 fi 
 ROOT_PATH="${SRC_PATH}/${PROJECT_DIR}"
-#-------------------------------------------------------
+# *-------------------------------------------------------
 
-
-# PYTHONPATH - PYTHONPATh - PYTHONPATH --------------------------------
+# PYTHONPATH - PYTHONPATH - PYTHONPATH --------------------------------
 export PYTHONPATH=$PYTHONPATH:${ROOT_PATH}/src
 export PYTHONPATH=$PYTHONPATH:${SRC_PATH}/sccl/src
 # *--------------------------------------------------------------------
@@ -117,12 +119,14 @@ export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 # kill zombies
 execute_watchout
 
+# debug
 #ps -ef | grep gz
 
+
 # start gazebo
-# sim_options=" -r -s --headless-rendering --render-engine ogre2 "
+# sim_options=" -r -s --headless-rendering --render-engine ogre2"
 sim_options=" -r --render-engine ogre2"
-gz sim ${sim_options} "${ROOT_PATH}/models/colored_line_following.sdf"  &
+gz sim ${sim_options} "${ROOT_PATH}/models/catching_robot.sdf"  &
 
 # debug
 #ps -ef | grep gz
@@ -133,21 +137,24 @@ echo  Executing Experiment
 REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     python3 run.py \
     scenario=ppo \
-    simulator=gz_3w_lf \
-    system=3wrobot_line_following \
-    running_objective=3wrobot_line_following \
-    scenario.env="LineFollowing" \
-    scenario.total_timesteps=5000 \
+    simulator=gz_3w_rp \
+    system=3wrobot_robot_pursuit \
+    running_objective=3wrobot_robot_pursuit \
+    scenario.env="RobotPursuit" \
+    scenario.total_timesteps=10000 \
     scenario.num_steps=250 \
-    scenario.policy_lr="1e-4" \
+    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-02-27/00-48-26/0" \
+    scenario.evaluation_only=true \
+    scenario.evaluation_episode_number=30 \
     +seed=${SEED} \
-    --experiment=ppo_lf_1e-4
+    --experiment=ppo_rp_extend_eval
 
 echo DONE
 
 # kill zombies
 sleep 5s
-execute_watchout
+# execute_watchout
 
-#ps -ef | grep gz
+# debug
+# ps -ef | grep gz
 

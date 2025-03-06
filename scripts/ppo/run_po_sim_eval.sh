@@ -141,8 +141,9 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.env="PushingObject" \
     scenario.total_timesteps=5000 \
     scenario.num_steps=250 \
-    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-02-17/16-44-57/0" \
+    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-02-27/02-53-09/0" \
     scenario.evaluation_only=true \
+    scenario.evaluation_episode_number=10 \
     +seed=42 \
     --experiment=ppo_po_eval
 
@@ -150,7 +151,7 @@ echo DONE
 
 # kill zombies
 sleep 5s
-execute_watchout
+# execute_watchout
 
 # debug
 # ps -ef | grep gz
