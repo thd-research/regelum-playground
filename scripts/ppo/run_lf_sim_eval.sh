@@ -131,7 +131,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.env="LineFollowing" \
     scenario.total_timesteps=5000 \
     scenario.num_steps=250 \
-    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-02-26/23-02-01/0" \
+    scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-03-07/09-06-38/0" \
     scenario.evaluation_only=true \
     scenario.evaluation_episode_number=30 \
     +seed=42 \

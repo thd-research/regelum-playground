@@ -141,11 +141,11 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     system=3wrobot_robot_pursuit \
     running_objective=3wrobot_robot_pursuit \
     scenario.env="RobotPursuit" \
-    scenario.total_timesteps=5000 \
+    scenario.total_timesteps=10000 \
     scenario.num_steps=250 \
-    scenario.policy_lr="1e-4" \
+    scenario.policy_lr="5e-4" \
     +seed=${SEED} \
-    --experiment=ppo_rp_1e-4
+    --experiment=ppo_rp_5e-4
 
 echo DONE
 

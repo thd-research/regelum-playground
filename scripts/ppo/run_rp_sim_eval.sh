@@ -145,7 +145,7 @@ REHYDRA_FULL_ERROR=1 CUDA_VISIBLE_DEVICES="" \
     scenario.num_steps=250 \
     scenario.checkpoint_dirpath="/regelum-playground/regelum_data/outputs/2025-02-27/00-48-26/0" \
     scenario.evaluation_only=true \
-    scenario.evaluation_episode_number=30 \
+    scenario.evaluation_episode_number=5 \
     +seed=${SEED} \
     --experiment=ppo_rp_extend_eval
 
